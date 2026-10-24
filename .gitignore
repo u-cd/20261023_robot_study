@@ -12,3 +12,6 @@ docs/images/assembly/originals/
 *.heic
 *.zip
 *.AppImage
+
+# 元の実機デモ動画（変換後のMP4を利用）
+/IMG_2769.MOV

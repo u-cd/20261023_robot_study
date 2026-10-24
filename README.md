@@ -42,5 +42,6 @@ Arduino CLIは `.tools/arduino-cli` にローカル配置しています。ツ�
 - [ボタンのクリック・長押しで操作する](docs/arm_panel_ja.md)
 - [実機テストの観察結果・制約](docs/hardware_observations_ja.md)
 - [組立写真](docs/images/assembly/README.md)
+- [初回のブロック搬送デモ動画](docs/videos/README.md)
 
 まずは固定位置間のブロック移動を実現し、次にカメラによる位置検出と自動把持へ進みます。PyTorchによる模倣学習は、その後の発展課題です。
