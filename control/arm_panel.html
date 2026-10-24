@@ -1,0 +1,130 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ロボットアーム 手動操作</title>
+<style>
+*{box-sizing:border-box}body{font:16px/1.6 system-ui,sans-serif;background:#eef2f6;color:#172b40;margin:0;padding:26px}
+main{max-width:1280px;margin:auto}h1{font-size:28px;margin:0}h2{font-size:19px;margin:0}p{margin:8px 0 16px}
+section{background:white;padding:20px;border:1px solid #d8e0e9;border-radius:14px;margin:18px 0}
+.row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}button,input,select{font:inherit;padding:9px 12px;border-radius:8px;border:1px solid #9eafc0}
+button{background:#f3f6fa;cursor:pointer}button:disabled{opacity:.42;cursor:default}input{max-width:220px}
+.primary{background:#17649a;color:white;border-color:#17649a}.stop{background:#a42b2b;color:white;border:0;font-weight:700}
+.muted{color:#52677d;font-size:14px}.note{border-left:4px solid #c58926;padding-left:12px}
+.grid-wrap{overflow-x:auto;padding:3px 1px 14px}.joints{display:grid;grid-template-columns:repeat(5,minmax(185px,1fr));gap:14px;min-width:980px}
+.joint{background:white;border:1px solid #d8e0e9;border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;text-align:center}
+.joint.active{border-color:#66a4c7}.joint.moving{box-shadow:0 0 0 3px #b6d9ed}
+.badge{font-size:12px;letter-spacing:.08em;color:#52677d}.state{font-size:13px;color:#52677d;min-height:21px}.state.on{color:#166449}
+.jog{font-size:30px;height:60px;width:100%;touch-action:none;user-select:none;-webkit-user-select:none;background:#f0f6fb;color:#17649a;border-color:#c4d9e7}
+.jog:active{background:#c6dfef}.angle{font-size:42px;line-height:1.3;font-weight:700;font-variant-numeric:tabular-nums}.angle small{font-size:20px;color:#52677d}
+.target{font-size:13px;color:#52677d;min-height:21px}.settings{border-top:1px solid #e5ebf0;margin-top:6px;padding-top:12px;display:grid;gap:8px;text-align:left}
+.settings label{font-size:13px;color:#52677d}.settings input,.settings select,.settings button{width:100%;min-width:0;padding:7px 9px;font-size:14px}
+.field{display:grid;grid-template-columns:1fr 75px;gap:6px;align-items:center}.range{font-size:12px;color:#52677d}.off{margin-top:4px}
+#message{min-height:28px;overflow-wrap:anywhere}.error{color:#a12626}@media(max-width:650px){body{padding:16px}h1{font-size:24px}}
+</style>
+<main>
+<h1>ロボットアーム 手動操作</h1>
+<p class="muted">▲で角度を増やす、▼で減らす。クリックで1度、長押しで連続操作。角度・速度は指令値です。</p>
+<section>
+<div class="row"><input id="port" aria-label="USBポート" value="/dev/ttyUSB0"><button id="connect" class="primary">接続</button><button id="disconnect" disabled>切断</button><button id="refresh" disabled>全関節の状態を更新</button><button id="stop" class="stop" disabled>全関節 停止・保持</button></div>
+<p class="muted" style="margin-bottom:0">接続時に基板がリセットされ、全関節の保持が解除されます。先にアームを支持してください。</p>
+</section>
+<div class="grid-wrap"><div class="joints" id="joints"></div></div>
+<p class="muted">長押しは0.3秒後に開始。矢印を離す・領域から出る・画面のフォーカスが外れると移動指令を停止します。同時に動かすのは1関節です。</p>
+<section>
+<div id="message" role="status" aria-live="polite">接続後、操作したい関節の列で有効化してください。</div>
+<p class="note muted">最初の有効化は開始角度へ急に動く場合があります。保持解除で肩・肘が落下する場合があります。確認済みの角度を使い、必要な支持を行ってください。</p>
+<p class="muted" style="margin-bottom:0">肩・肘の無理な姿勢、過熱、ケーブルの絡みを避けてください。複数サーボの保持には適合する電源が必要です。通信途絶時は250msで連続移動指令が止まりますが、電源遮断や機械的な即時停止ではありません。</p>
+</section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+const definitions=[['台座','D9'],['肩','D6'],['肘','D5'],['手首','D3'],['グリッパー','D11']];
+const defaultAngles=[90,0,0,80,90];
+let connected=false,joints=[],held=false,heldJoint=null,epoch=0,timer=null,busy=false,chain=Promise.resolve();
+for(let joint=1;joint<=5;joint++){
+  const [name,pin]=definitions[joint-1],grip=joint===5;
+  $('joints').insertAdjacentHTML('beforeend',`
+  <article class="joint" id="card-${joint}" aria-label="関節${joint} ${name}">
+    <header><div class="badge">JOINT ${joint} · ${pin}</div><h2>${name}</h2></header>
+    <div class="state" id="state-${joint}">未接続</div>
+    <button class="jog" id="plus-${joint}" disabled aria-label="関節${joint} ${name}の角度を増やす">▲</button>
+    <div><div class="angle" id="angle-${joint}">—<small>°</small></div><div class="target" id="target-${joint}">現在角度は不明</div></div>
+    <button class="jog" id="minus-${joint}" disabled aria-label="関節${joint} ${name}の角度を減らす">▼</button>
+    <div class="range">指令範囲 ${grip?'50〜150':'0〜180'}°</div>
+    <div class="settings">
+      <div class="field"><label for="initial-${joint}">開始角度</label><input id="initial-${joint}" aria-label="関節${joint}の開始角度" type="number" value="${defaultAngles[joint-1]}" min="${grip?50:0}" max="${grip?150:180}"></div>
+      <button class="primary" id="start-${joint}" disabled>有効にする</button>
+      <label for="speed-${joint}">指令速度 <span id="actual-speed-${joint}">25度/秒</span></label>
+      <select id="speed-${joint}" aria-label="関節${joint}の指令速度"><option value="12">約12度/秒</option><option value="25" selected>25度/秒</option><option value="50">50度/秒</option><option value="100">100度/秒</option></select>
+      <button id="applySpeed-${joint}" disabled>速度を適用</button>
+      <button class="off" id="off-${joint}" disabled>保持を解除</button>
+    </div>
+  </article>`);
+}
+function render(){
+  $('connect').disabled=connected||busy;$('disconnect').disabled=!connected||busy||held;
+  for(const id of ['refresh','stop'])$(id).disabled=!connected||busy;
+  for(let joint=1;joint<=5;joint++){
+    const item=joints.find(x=>x.joint===joint),active=connected&&item?.active,locked=busy||held;
+    $('card-'+joint).classList.toggle('active',!!active);$('card-'+joint).classList.toggle('moving',held&&heldJoint===joint);
+    $('state-'+joint).textContent=!connected?'未接続':active?'有効・保持中':'無保持';$('state-'+joint).classList.toggle('on',!!active);
+    $('angle-'+joint).innerHTML=active?`${item.angle}<small>°</small>`:'—<small>°</small>';
+    $('target-'+joint).textContent=active?`目標 ${item.target}°`:'現在角度は不明';
+    $('actual-speed-'+joint).textContent=`${item?.speed??25}度/秒`;
+    $('start-'+joint).disabled=!connected||active||locked;$('off-'+joint).disabled=!active||locked;
+    $('initial-'+joint).disabled=!!active||locked;$('speed-'+joint).disabled=locked;
+    $('applySpeed-'+joint).disabled=!connected||locked;
+    for(const direction of ['minus','plus'])$(direction+'-'+joint).disabled=!active||busy||(held&&heldJoint!==joint);
+  }
+}
+function show(text,error=false){$('message').textContent=text;$('message').className=error?'error':'';}
+async function request(data){
+  const response=await fetch('/api',{method:'POST',headers:{'Content-Type':'application/json','X-Arm-Token':'__TOKEN__'},body:JSON.stringify(data)});
+  const result=await response.json();
+  if(!response.ok){if(result.connected===false){connected=false;joints=[];}render();throw Error(result.error);}
+  const newlyConnected=!connected&&result.connected;connected=result.connected;joints=result.joints;
+  if(newlyConnected)for(const item of joints)$('speed-'+item.joint).value=String(item.speed);
+  render();if(result.message)show(result.message);return result;
+}
+function enqueue(data,guard=null){
+  const pending=chain.then(()=>{if(guard!==null&&guard!==epoch)return;return request(data);});
+  chain=pending.catch(error=>{show(error.message,true);cancelHold(false);});return pending;
+}
+function cancelHold(send=true){
+  const was=held;held=false;heldJoint=null;epoch++;clearTimeout(timer);render();
+  if(send&&was&&connected)enqueue({action:'stop'});
+}
+async function press(event,joint,direction){
+  if(event.button!==undefined&&event.button!==0)return;
+  event.preventDefault();cancelHold();held=true;heldJoint=joint;const token=++epoch;render();
+  try{await enqueue({action:'step',joint,direction},token);}catch{return;}
+  async function repeat(){
+    if(!held||token!==epoch)return;
+    try{await enqueue({action:'jog',joint,direction},token);}catch{return;}
+    if(held&&token===epoch)timer=setTimeout(repeat,80);
+  }
+  if(held&&token===epoch)timer=setTimeout(repeat,300);
+}
+for(let joint=1;joint<=5;joint++){
+  for(const [name,direction] of [['minus','-'],['plus','+']]){
+    const button=$(name+'-'+joint);
+    button.addEventListener('pointerdown',event=>press(event,joint,direction));
+    button.addEventListener('pointerleave',()=>{if(heldJoint===joint)cancelHold();});
+    button.addEventListener('pointercancel',()=>cancelHold());
+    button.addEventListener('click',event=>{if(event.detail===0)enqueue({action:'step',joint,direction});});
+    button.addEventListener('contextmenu',event=>event.preventDefault());
+  }
+  $('start-'+joint).onclick=()=>{const value=$('initial-'+joint).value;if(!/^\d+$/.test(value)){show('開始角度を整数で入力してください。',true);return;}enqueue({action:'start',joint,angle:Number(value)});};
+  $('off-'+joint).onclick=()=>{cancelHold();enqueue({action:'off',joint});};
+  $('applySpeed-'+joint).onclick=()=>{cancelHold();enqueue({action:'speed',joint,speed:Number($('speed-'+joint).value)});};
+}
+document.addEventListener('pointerup',()=>cancelHold());window.addEventListener('blur',()=>cancelHold());
+document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelHold();});
+$('connect').onclick=async()=>{busy=true;render();show('接続中。基板の起動を待っています…');try{await enqueue({action:'connect',port:$('port').value});}catch{}finally{busy=false;render();}};
+$('disconnect').onclick=()=>{cancelHold();enqueue({action:'disconnect'});};
+$('refresh').onclick=()=>enqueue({action:'status'});
+$('stop').onclick=()=>{cancelHold(false);enqueue({action:'stop'});};
+render();
+</script>
+</html>

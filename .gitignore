@@ -1,0 +1,14 @@
+.tools/
+.build/
+.venv/
+__pycache__/
+*.pyc
+
+
+# メーカー配布教材・変換前写真・配布ツールはローカル保管
+ADA031-Adeept_Robotic_Arm_Kit_for_Arduino-V4.0-20251205/
+docs/images/assembly/originals/
+*.HEIC
+*.heic
+*.zip
+*.AppImage
