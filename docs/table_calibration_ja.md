@@ -15,7 +15,7 @@
 格子を平らに机へ固定し、使う42交点全体が見えるようにする。カメラと台座を固定する。格子の実寸が30mm間隔であることを定規で確認する。別のカメラアプリは終了する。
 
 ```bash
-.venv-ai/bin/python vision/calibrate_grid.py --columns 7 --rows 6 --spacing-mm 30
+uv run python vision/calibrate_grid.py --columns 7 --rows 6 --spacing-mm 30
 ```
 
 既存の `configs/table_calibration.json` は上書きしない。再校正時は既存ファイルを退避するか、`--output configs/table_calibration_v2.json` を指定する。
@@ -65,7 +65,7 @@
 合格時は `configs/table_calibration.json` に校正データを保存する。生成記録はGit管理から除外する。途中から再開する場合は、実際の途中記録のパスを指定する。
 
 ```bash
-.venv-ai/bin/python vision/calibrate_grid.py --columns 7 --rows 6 --spacing-mm 30 --resume runs/table_calibration/grid_日時/draft/record.json
+uv run python vision/calibrate_grid.py --columns 7 --rows 6 --spacing-mm 30 --resume runs/table_calibration/grid_日時/draft/record.json
 ```
 
 再開時は元の静止画像を使う。カメラを動かしていたら古い画像の校正を使わず、新しく撮影する。途中記録の元フォルダは維持し、再開後の変更は新しいセッションへ保存する。
@@ -75,7 +75,7 @@
 校正画面が合格して終了したら実行する。
 
 ```bash
-.venv-ai/bin/python vision/live_detect.py --calibration configs/table_calibration.json
+uv run python vision/live_detect.py --calibration configs/table_calibration.json
 ```
 
 検出枠中心に対する紙面上の推定位置を `plane~ (x,y) mm` と表示する。校正領域の外側には外挿せず `outside calibrated area` と表示する。同じカメラ指定・解像度を使う。Sで保存する検出結果にも `plane_estimate_mm` を記録する。

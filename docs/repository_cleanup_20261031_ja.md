@@ -29,12 +29,14 @@
 
 `.venv-ai/`、`.tools/`、メーカー公式教材とDEIM公式実装 `reference/` は、環境・依存資料として再開に使うため保持。Gitには追加しない。
 
+同日追記：その後のuv移行で `.venv-ai/` を削除し、検証済みの `.venv/` に置き換えた。現在の環境構築方法は [uvの手順](uv_setup_ja.md) を参照。
+
 ## 再生成
 
 6モデル比較用データの再作成：
 
 ```bash
-.venv-ai/bin/python vision/prepare_training_test.py \
+uv run python vision/prepare_training_test.py \
   --output data/sponge_evaluation \
   --val-session 20261028_073737_b805 \
   --test-sessions 20261028_075220_c639 20261028_063549_09d5
@@ -43,7 +45,7 @@
 最初の学習動作テスト用データの再作成：
 
 ```bash
-.venv-ai/bin/python vision/prepare_training_test.py
+uv run python vision/prepare_training_test.py
 ```
 
 重みの取得・学習は [学習手順](training_test_ja.md) と [6モデル評価報告](model_comparison_ja.md) を参照。Arduinoは [VS Codeからの書き込み手順](vscode_arduino_ja.md) で再コンパイルする。

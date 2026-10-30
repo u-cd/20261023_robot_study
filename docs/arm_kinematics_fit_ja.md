@@ -77,7 +77,7 @@ Z = shoulder_height + L1*sin(a) + L2*sin(b)
 - 計算コード：`control/arm_kinematics.py`、実行：`vision/fit_arm_kinematics.py`。
 
 ```bash
-.venv-ai/bin/python vision/fit_arm_kinematics.py
+uv run python vision/fit_arm_kinematics.py
 ```
 
 数式上の順運動学、逆計算の往復、外挿・未確認高さの拒否、合成データへの当てはめの4テストを確認。アームへの移動指令を送る機能はこの計算モジュールに含めない。

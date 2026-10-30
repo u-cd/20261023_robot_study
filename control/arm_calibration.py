@@ -4,6 +4,7 @@ import hashlib
 import json
 from pathlib import Path
 import subprocess
+import sys
 import shutil
 import time
 import uuid
@@ -88,7 +89,7 @@ class CalibrationRecorder:
             folder=self.session/sample_id
             folder.mkdir()
             try:
-                subprocess.run([str(ROOT/'.venv-ai/bin/python'),str(ROOT/'vision/capture_arm_sample.py'),
+                subprocess.run([sys.executable,str(ROOT/'vision/capture_arm_sample.py'),
                     '--calibration',str(self.calibration_path),'--point',str(point),
                     '--angles',','.join(map(str,angles)),'--output',str(folder)],
                     capture_output=True,text=True,timeout=15,check=True)

@@ -56,7 +56,7 @@
 ターミナルで候補だけ計算する場合：
 
 ```bash
-.venv-ai/bin/python -m control.pick_place_plan \
+uv run python -m control.pick_place_plan \
   --pick 15 135 --place 30 90 \
   --current 93 144 63 80 150 \
   --pick-z 15 --travel-z 40 --release-z 15

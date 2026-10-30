@@ -7,13 +7,13 @@
 プロジェクトのターミナルから実行する。
 
 ```bash
-.venv-ai/bin/python vision/live_detect.py
+uv run python vision/live_detect.py
 ```
 
 EMEET Webカメラを固定IDで選ぶため、USB接続によってデバイス番号が変わっても対応できる。明示する場合は次のように指定する。
 
 ```bash
-.venv-ai/bin/python vision/live_detect.py --camera /dev/video2
+uv run python vision/live_detect.py --camera /dev/video2
 ```
 
 別の撮影アプリで同じカメラを使っている場合は、そのアプリを終了する。
@@ -44,7 +44,7 @@ EMEET Webカメラを固定IDで選ぶため、USB接続によってデバイス
 画面を出さず、取得・推論・保存だけを確認するコマンド：
 
 ```bash
-.venv-ai/bin/python vision/live_detect.py --headless --frames 30 --save-last
+uv run python vision/live_detect.py --headless --frames 30 --save-last
 ```
 
 次は画像のピクセル座標と、アームを基準にした机上の実測座標の対応を取る。その後、関節の寸法・回転方向・取り付け角度を確認して、目標位置から関節角度を計算する。

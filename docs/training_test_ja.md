@@ -32,24 +32,23 @@
 
 ```bash
 # 分割済みデータがある場合は、この準備コマンドは再実行しない
-.venv-ai/bin/python vision/prepare_training_test.py
+uv run python vision/prepare_training_test.py
 
 # YOLO
-.venv-ai/bin/python vision/train_yolo_test.py
+uv run python vision/train_yolo_test.py
 
 # DEIM
-.venv-ai/bin/python vision/train_deim_test.py
+uv run python vision/train_deim_test.py
 ```
 
 出力は `runs/training_test/`。DEIMの設定は `data/sponge_training_test/deim.yml`。DEIMは公式の学習処理をそのまま呼ぶ。独自の学習ループで代用しない。
 
 ## 環境の再構築
 
-CPU版PyTorchを先に入れる。GPU向けの巨大なCUDA依存を取得しないため、インストール元を明示する。
+依存関係は `pyproject.toml` と `uv.lock` で管理する。CPU版PyTorchの取得元を設定済み。
 
 ```bash
-.venv-ai/bin/python -m pip install --timeout 180 torch==2.5.1 torchvision==0.20.1 --index-url https://download.pytorch.org/whl/cpu
-.venv-ai/bin/python -m pip install -r requirements-training.txt
+uv sync --locked
 git clone https://github.com/Intellindust-AI-Lab/DEIM.git reference/DEIM
 git -C reference/DEIM checkout 09d35d53d39ee3145a1e61e3a989b28b9468d1dd
 ```

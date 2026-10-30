@@ -7,7 +7,7 @@
 既存のアーム操作サーバー（8765）は終了しない。映像付き画面のプロセス `vision/arm_camera_panel.py` が動いていれば、そのターミナルだけCtrl+Cで終了し、更新版を起動する。
 
 ```bash
-.venv-ai/bin/python vision/arm_camera_panel.py
+uv run python vision/arm_camera_panel.py
 ```
 
 ブラウザで <http://127.0.0.1:8766> を開き、再読み込みする。起動・読み込み・候補計算では接続、保持解除、移動の指令は送らない。アーム操作サーバーが起動していない場合は起動時にエラーとなる。モデルが未生成の場合は座標欄が表示されない。

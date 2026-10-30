@@ -14,7 +14,7 @@
 .tools/arduino-cli lib install Servo
 ```
 
-ライブラリを通常の場所へインストールした別PCでは、下記の `--libraries` は省略できます。Python側は `requirements.txt` を参照してください。
+ライブラリを通常の場所へインストールした別PCでは、下記の `--libraries` は省略できます。Python側は `uv sync --locked` で環境を構築してください（`pyproject.toml` / `uv.lock`）。
 
 ## コンパイル
 
@@ -53,7 +53,7 @@ ls /dev/ttyUSB* /dev/ttyACM* 2>/dev/null
 通常は[操作画面](arm_panel_ja.md)を使います。
 
 ```bash
-python3 control/arm_panel.py
+uv run python control/arm_panel.py
 ```
 
 文字コマンドで操作する場合は、Pythonを終了してからモニタを開きます。

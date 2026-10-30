@@ -14,7 +14,7 @@
 xdg-open runs/sponge_comparison/viewer.html
 ```
 
-画像と評価結果をHTML内に埋め込んでいるため、サーバー起動・インターネット接続・再推論は不要。再生成する場合は`.venv-ai/bin/python vision/build_result_viewer.py`を実行する。[生成コード](../vision/build_result_viewer.py)と[画面テンプレート](../vision/result_viewer.html)はGit管理でき、写真を含む生成後のHTMLはruns内にローカル保存する。
+画像と評価結果をHTML内に埋め込んでいるため、サーバー起動・インターネット接続・再推論は不要。再生成する場合は`uv run python vision/build_result_viewer.py`を実行する。[生成コード](../vision/build_result_viewer.py)と[画面テンプレート](../vision/result_viewer.html)はGit管理でき、写真を含む生成後のHTMLはruns内にローカル保存する。
 
 ## 結果
 
@@ -192,10 +192,10 @@ trainは撮影セッション`20261028_064150_737a`の6枚と`20261028_080953_3f
 - 画像比較：`runs/sponge_comparison/test_comparison.jpg`（代表3枚、正解枠＋6モデル。見落とし・余計な検出のある例を優先して含める）。データ・重み・個別画像・ログはGit対象外。
 
 ```bash
-.venv-ai/bin/python vision/run_experiments.py
-.venv-ai/bin/python vision/evaluate_detectors.py --split val
-.venv-ai/bin/python vision/evaluate_detectors.py --split test
-.venv-ai/bin/python vision/summarize_experiments.py
+uv run python vision/run_experiments.py
+uv run python vision/evaluate_detectors.py --split val
+uv run python vision/evaluate_detectors.py --split test
+uv run python vision/summarize_experiments.py
 ```
 
 実行済みの学習は再実行時にスキップする。新しい条件で学習する際は設定ファイルのoutputを新しいフォルダへ変え、評価用画像を見た後の調整は別の実験として扱う。
@@ -203,7 +203,7 @@ trainは撮影セッション`20261028_064150_737a`の6枚と`20261028_080953_3f
 データの準備コマンド（出力先が既にある場合は再実行不要）：
 
 ```bash
-.venv-ai/bin/python vision/prepare_training_test.py --output data/sponge_evaluation --val-session 20261028_073737_b805 --test-sessions 20261028_075220_c639 20261028_063549_09d5
+uv run python vision/prepare_training_test.py --output data/sponge_evaluation --val-session 20261028_073737_b805 --test-sessions 20261028_075220_c639 20261028_063549_09d5
 ```
 
 環境構築は[最初の動作テスト](training_test_ja.md)を参照。追加モデルは`models/yolo11s.pt`と`models/deim_dfine_s_coco.pth`に公式重みを配置する。配布元：[YOLO11s](https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11s.pt)、[DEIM-S](https://drive.google.com/file/d/1tB8gVJNrfb6dhFvoHJECKOF5VpkthhfC/view)。DEIM公式コピーのコミットと重みのSHA256、Pythonと依存パッケージのバージョンは`runs/sponge_comparison/environment.json` / `environment.txt`へ記録した。

@@ -64,14 +64,14 @@ AIはスポンジ（sponge）と黒い置き場所（target）の2クラスを�
 
 ## 最初の作業：画像収集
 
-AI用にPython 3.12の仮想環境 `.venv-ai` を分ける。ロボット操作用の環境はそのまま使う。必要なライブラリは `requirements-vision.txt`。
+Python 3.12の環境をuvで管理する。`uv sync --locked` で `.venv` を作成し、操作・撮影・推論・学習を `uv run python ...` で実行する。依存関係は `pyproject.toml` と `uv.lock` を参照。
 
 1. WebカメラをUSB接続し、机を見下ろす位置に固定する。
 2. アームは撮影中に動かさず、電源を外して支持する。
 3. 実際に使う範囲にスポンジと黒い丸を置き、両方の位置を変えながら撮影する。画像収集のために物を動かすときはアームは動かさない。
 
 ```bash
-.venv-ai/bin/python vision/collect_sponge.py --camera /dev/video2 --split train
+uv run python vision/collect_sponge.py --camera /dev/video2 --split train
 ```
 
 内蔵カメラが映る場合は `--camera 1` や実際の `/dev/videoN` を指定する。画面をクリックしてフォーカスを当て、以下のキーを使う。
@@ -90,8 +90,8 @@ AI用にPython 3.12の仮想環境 `.venv-ai` を分ける。ロボット操作�
 検証用と評価用は、それぞれ起動し直して撮影する。
 
 ```bash
-.venv-ai/bin/python vision/collect_sponge.py --camera /dev/video2 --split val
-.venv-ai/bin/python vision/collect_sponge.py --camera /dev/video2 --split test
+uv run python vision/collect_sponge.py --camera /dev/video2 --split val
+uv run python vision/collect_sponge.py --camera /dev/video2 --split test
 ```
 
 `data/sponge/` に画像・YOLO形式の枠・撮影セッション記録・dataset.yamlを保存する。写真は外部送信しない。学習と検証に使用した写真を、最終評価用へ重複させない。

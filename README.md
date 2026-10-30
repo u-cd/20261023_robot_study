@@ -17,10 +17,18 @@
 
 **最新の引き継ぎ：[2026年10月31日の搬送成功・改善点メモ](docs/session_notes_20261031_ja.md)。スポンジの持ち上げとターゲットへの搬送に実機で成功。把持・解放高さは入力上5mmがよかった。次回はこのメモを先に読む。**
 
+Python環境はuvで管理しています（Python 3.12、Linux x86_64、CPU版PyTorch）。最初にプロジェクト直下で実行してください。
+
+```bash
+uv sync --locked
+```
+
+環境の有効化は不要です。制御・撮影・推論・学習は `uv run python ...` で実行します。[uvでの実行手順](docs/uv_setup_ja.md)。
+
 1. アームを支持し、ケーブルの絡みとネジの締め付けを確認する。
 2. USB接続後、`ls /dev/ttyUSB* /dev/ttyACM* 2>/dev/null` でポートを確認する。
-3. プロジェクトルートで `python3 control/arm_panel.py --record-calibration` を実行する。
-4. 別のターミナルで `.venv-ai/bin/python vision/arm_camera_panel.py` を実行する。
+3. プロジェクトルートで `uv run python control/arm_panel.py --record-calibration` を実行する。
+4. 別のターミナルで `uv run python vision/arm_camera_panel.py` を実行する。
 5. ブラウザで <http://127.0.0.1:8766> を開き、ポートを設定して接続する。既存の姿勢と支持を確認してから操作する。
 
 接続で基板がリセットされると関節の保持が解除されます。過熱時は支持して電源を外し、冷ましてください。停止ボタンは電源遮断ではありません。

@@ -7,13 +7,13 @@
 同じカメラを使うライブ検出画面はQで終了する。紙とカメラ、台座の位置は校正時から維持する。
 
 ```bash
-python3 control/arm_panel.py --record-calibration
+uv run python control/arm_panel.py --record-calibration
 ```
 
 ライブ映像も表示する場合は、別のターミナルで次を実行する。
 
 ```bash
-.venv-ai/bin/python vision/arm_camera_panel.py
+uv run python vision/arm_camera_panel.py
 ```
 
 ブラウザで <http://127.0.0.1:8766> を開く。既存の8765番の操作サーバーとArduino接続は維持し、映像付き画面から同じ操作・記録を行える。起動済みの場合は8766番の画面を使う。カメラを使う他のアプリは終了する。

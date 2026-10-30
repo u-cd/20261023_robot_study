@@ -147,7 +147,7 @@ def main():
         '## 画像で確認する', '',
         '[結果ビューア（ローカルHTML）](../runs/sponge_comparison/viewer.html)では、最終評価12枚・検証12枚を切り替えて、正解枠と6モデルの予測を確認できる。拡大・前後の画像への移動・正解枠の表示切替・誤検出や見落としのある画像だけへの絞り込みに対応。青が正解枠、緑が正しく検出した枠、橙が余計な検出または位置ずれ、赤の破線が基準を満たす検出のなかった正解枠。', '',
         '```bash', 'xdg-open runs/sponge_comparison/viewer.html', '```', '',
-        '画像と評価結果をHTML内に埋め込んでいるため、サーバー起動・インターネット接続・再推論は不要。再生成する場合は`.venv-ai/bin/python vision/build_result_viewer.py`を実行する。[生成コード](../vision/build_result_viewer.py)と[画面テンプレート](../vision/result_viewer.html)はGit管理でき、写真を含む生成後のHTMLはruns内にローカル保存する。', '',
+        '画像と評価結果をHTML内に埋め込んでいるため、サーバー起動・インターネット接続・再推論は不要。再生成する場合は`uv run python vision/build_result_viewer.py`を実行する。[生成コード](../vision/build_result_viewer.py)と[画面テンプレート](../vision/result_viewer.html)はGit管理でき、写真を含む生成後のHTMLはruns内にローカル保存する。', '',
         '## 結果', '', '| モデル | 検証mAP50–95 | 評価mAP50–95 | 評価mAP50 | 両方検出 | 推論時間/枚 | 学習全体 | 最大RSS | 平均CPU |',
         '| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |']
     for name, r in results.items():
@@ -202,10 +202,10 @@ def main():
         '- 学習ログ：`<モデル>.log`、時間・CPU・最大RSS：`<モデル>_time.txt`、1秒ごとのプロセス群RSS／PC全体CPU／空きメモリ：`<モデル>_resources.csv`。',
         '- 共通評価の結果：`val_evaluation.json`、`test_evaluation.json`、`summary.json`。各モデルの予測枠と画像は`val_predictions.json` / `test_predictions.json`と`val_images/` / `test_images/`。',
         '- 画像比較：`runs/sponge_comparison/test_comparison.jpg`（代表3枚、正解枠＋6モデル。見落とし・余計な検出のある例を優先して含める）。データ・重み・個別画像・ログはGit対象外。', '',
-        '```bash', '.venv-ai/bin/python vision/run_experiments.py', '.venv-ai/bin/python vision/evaluate_detectors.py --split val', '.venv-ai/bin/python vision/evaluate_detectors.py --split test', '.venv-ai/bin/python vision/summarize_experiments.py', '```', '',
+        '```bash', 'uv run python vision/run_experiments.py', 'uv run python vision/evaluate_detectors.py --split val', 'uv run python vision/evaluate_detectors.py --split test', 'uv run python vision/summarize_experiments.py', '```', '',
         '実行済みの学習は再実行時にスキップする。新しい条件で学習する際は設定ファイルのoutputを新しいフォルダへ変え、評価用画像を見た後の調整は別の実験として扱う。', '',
         'データの準備コマンド（出力先が既にある場合は再実行不要）：', '',
-        '```bash', '.venv-ai/bin/python vision/prepare_training_test.py --output data/sponge_evaluation --val-session 20261028_073737_b805 --test-sessions 20261028_075220_c639 20261028_063549_09d5', '```', '',
+        '```bash', 'uv run python vision/prepare_training_test.py --output data/sponge_evaluation --val-session 20261028_073737_b805 --test-sessions 20261028_075220_c639 20261028_063549_09d5', '```', '',
         '環境構築は[最初の動作テスト](training_test_ja.md)を参照。追加モデルは`models/yolo11s.pt`と`models/deim_dfine_s_coco.pth`に公式重みを配置する。配布元：[YOLO11s](https://github.com/ultralytics/assets/releases/download/v8.3.0/yolo11s.pt)、[DEIM-S](https://drive.google.com/file/d/1tB8gVJNrfb6dhFvoHJECKOF5VpkthhfC/view)。DEIM公式コピーのコミットと重みのSHA256、Pythonと依存パッケージのバージョンは`runs/sponge_comparison/environment.json` / `environment.txt`へ記録した。', '',
         'DEIMv2の追加取得：', '', '```bash', 'git clone https://github.com/Intellindust-AI-Lab/DEIMv2.git reference/DEIMv2', 'git -C reference/DEIMv2 checkout f005f50ce565e63f6c298feccb51901a98c3d035', '```', '',
         '公式重みは[DEIMv2-S](https://drive.google.com/file/d/1MDOh8UXD39DNSew6rDzGFp1tAVpSGJdL/view)を`models/deimv2_dinov3_s_coco.pth`、[DEIMv2-M](https://drive.google.com/file/d/1nPKDHrotusQ748O1cQXJfi5wdShq6bKp/view)を`models/deimv2_dinov3_m_coco.pth`へ配置する。今回は既存のPython環境で公式requirementsのPyTorch 2.5.1 / torchvision 0.20.1を満たしており、追加依存のインストールは不要だった。追加実験の設定・公式コピーのコミット・配布重みのSHA256は`runs/sponge_comparison/deimv2_environment.json`へ記録した。', '']
