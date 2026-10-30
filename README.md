@@ -46,6 +46,7 @@ Arduino CLIは `.tools/arduino-cli` にローカル配置しています。ツ�
 ## 資料
 
 - [2026年10月31日の作業終了メモ・次回の改善点](docs/session_notes_20261031_ja.md)
+- [次回候補：模倣学習の構成・必要なデータ・最短の試行案](docs/imitation_learning_plan_ja.md)
 - [スポンジの把持・持ち上げ・搬送・解放](docs/pick_place_first_trial_ja.md)
 - [リポジトリ整理・残したデータと再生成方法](docs/repository_cleanup_20261031_ja.md)
 
@@ -69,4 +70,4 @@ Arduino CLIは `.tools/arduino-cli` にローカル配置しています。ツ�
 - [組立写真](docs/images/assembly/README.md)
 - [初回のブロック搬送デモ動画](docs/videos/README.md)
 
-まずは固定位置間のブロック移動を実現し、次にカメラによる位置検出と自動把持へ進みます。PyTorchによる模倣学習は、その後の発展課題です。
+実機でのスポンジ搬送に成功しました。次回は、検出結果からの搬送への接続に加え、成功動作を記録して小さな模倣学習を試す案を優先候補として検討します。
