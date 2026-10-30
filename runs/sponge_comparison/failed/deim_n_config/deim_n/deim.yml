@@ -1,0 +1,116 @@
+{
+  "__include__": [
+    "/home/u/Desktop/20261023_robot_study/reference/DEIM/configs/deim_dfine/deim_hgnetv2_n_coco.yml"
+  ],
+  "num_classes": 2,
+  "remap_mscoco_category": false,
+  "device": "cpu",
+  "epoches": 20,
+  "eval_spatial_size": [
+    320,
+    320
+  ],
+  "output_dir": "/home/u/Desktop/20261023_robot_study/runs/sponge_comparison/deim_n",
+  "use_amp": false,
+  "use_ema": false,
+  "sync_bn": false,
+  "HGNetv2": {
+    "pretrained": false
+  },
+  "warmup_iter": 36,
+  "flat_epoch": 3,
+  "no_aug_epoch": 0,
+  "print_freq": 5,
+  "checkpoint_freq": 20,
+  "train_dataloader": {
+    "total_batch_size": 2,
+    "num_workers": 0,
+    "drop_last": false,
+    "dataset": {
+      "img_folder": "/home/u/Desktop/20261023_robot_study/data/sponge_evaluation/images/train",
+      "ann_file": "/home/u/Desktop/20261023_robot_study/data/sponge_evaluation/annotations/train.json",
+      "transforms": {
+        "ops": [
+          {
+            "type": "RandomPhotometricDistort",
+            "p": 0.5
+          },
+          {
+            "type": "Resize",
+            "size": [
+              320,
+              320
+            ]
+          },
+          {
+            "type": "ConvertPILImage",
+            "dtype": "float32",
+            "scale": true
+          },
+          {
+            "type": "ConvertBoxes",
+            "fmt": "cxcywh",
+            "normalize": true
+          }
+        ],
+        "policy": null,
+        "mosaic_prob": 0
+      }
+    },
+    "collate_fn": {
+      "base_size": 320,
+      "base_size_repeat": null,
+      "stop_epoch": 1000,
+      "mixup_prob": 0
+    }
+  },
+  "val_dataloader": {
+    "total_batch_size": 2,
+    "num_workers": 0,
+    "drop_last": false,
+    "dataset": {
+      "img_folder": "/home/u/Desktop/20261023_robot_study/data/sponge_evaluation/images/val",
+      "ann_file": "/home/u/Desktop/20261023_robot_study/data/sponge_evaluation/annotations/val.json",
+      "transforms": {
+        "ops": [
+          {
+            "type": "Resize",
+            "size": [
+              320,
+              320
+            ]
+          },
+          {
+            "type": "ConvertPILImage",
+            "dtype": "float32",
+            "scale": true
+          }
+        ],
+        "policy": null,
+        "mosaic_prob": 0
+      }
+    },
+    "collate_fn": {
+      "base_size": 320,
+      "base_size_repeat": null,
+      "stop_epoch": 1000,
+      "mixup_prob": 0
+    }
+  },
+  "lr_gamma": 0.1,
+  "optimizer": {
+    "type": "AdamW",
+    "lr": 0.0002,
+    "weight_decay": 0.0001,
+    "params": [
+      {
+        "params": "^backbone\\.",
+        "lr": 5e-05
+      },
+      {
+        "params": "^(?!backbone\\.)(?=.*(?:norm|bn|bias)).*$",
+        "weight_decay": 0.0
+      }
+    ]
+  }
+}

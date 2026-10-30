@@ -1,0 +1,155 @@
+{
+  "weights": "runs/sponge_comparison/yolo11n/weights/best.pt",
+  "parameters": 2590230,
+  "map50_95": 0.8872430457331447,
+  "map50": 1.0,
+  "latency_mean_ms": 43.46115419563527,
+  "latency_median_ms": 42.517912515904754,
+  "latency_p95_ms": 50.905530762975104,
+  "timed_frames": 36,
+  "latency_samples_ms": [
+    52.685951988678426,
+    39.120125002227724,
+    40.098540019243956,
+    46.184636012185365,
+    53.63964196294546,
+    41.3395119830966,
+    44.0586400218308,
+    40.78542999923229,
+    45.7903670030646,
+    43.41688397107646,
+    42.85454499768093,
+    41.64903104538098,
+    44.9148349580355,
+    41.553675022441894,
+    42.541854025330395,
+    47.18518804293126,
+    44.180332974065095,
+    45.08780699688941,
+    44.74397900048643,
+    42.493971006479114,
+    40.76046100817621,
+    41.637261980213225,
+    50.312057021074,
+    49.746069009415805,
+    41.63573600817472,
+    40.70313595002517,
+    44.089931005146354,
+    48.65238402271643,
+    42.67748800339177,
+    39.613837958313525,
+    37.59751399047673,
+    41.24923702329397,
+    38.632076990325004,
+    39.71615602495149,
+    42.065671004820615,
+    41.18758800905198
+  ],
+  "operating_threshold": 0.25,
+  "per_class": {
+    "sponge": {
+      "tp": 12,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "mean_center_error_px": 1.5427407801283828
+    },
+    "target": {
+      "tp": 12,
+      "fp": 0,
+      "fn": 0,
+      "precision": 1.0,
+      "recall": 1.0,
+      "mean_center_error_px": 1.0779460655304807
+    }
+  },
+  "both_found_images": 12,
+  "both_found_without_extra_detections": 12,
+  "per_image": [
+    {
+      "image_id": 1,
+      "matched": 2,
+      "gt": 2,
+      "false_positives": 0,
+      "file_name": "20261028_063549_09d5_91023cc99e.jpg"
+    },
+    {
+      "image_id": 2,
+      "matched": 2,
+      "gt": 2,
+      "false_positives": 0,
+      "file_name": "20261028_075220_c639_1cffa5bfb5.jpg"
+    },
+    {
+      "image_id": 3,
+      "matched": 2,
+      "gt": 2,
+      "false_positives": 0,
+      "file_name": "20261028_075220_c639_235fecf77c.jpg"
+    },
+    {
+      "image_id": 4,
+      "matched": 2,
+      "gt": 2,
+      "false_positives": 0,
+      "file_name": "20261028_075220_c639_24b1a78ad8.jpg"
+    },
+    {
+      "image_id": 5,
+      "matched": 2,
+      "gt": 2,
+      "false_positives": 0,
+      "file_name": "20261028_075220_c639_64313b1c72.jpg"
+    },
+    {
+      "image_id": 6,
+      "matched": 2,
+      "gt": 2,
+      "false_positives": 0,
+      "file_name": "20261028_075220_c639_75dc117e82.jpg"
+    },
+    {
+      "image_id": 7,
+      "matched": 2,
+      "gt": 2,
+      "false_positives": 0,
+      "file_name": "20261028_075220_c639_97bc9a57b9.jpg"
+    },
+    {
+      "image_id": 8,
+      "matched": 2,
+      "gt": 2,
+      "false_positives": 0,
+      "file_name": "20261028_075220_c639_b2b9c117ca.jpg"
+    },
+    {
+      "image_id": 9,
+      "matched": 2,
+      "gt": 2,
+      "false_positives": 0,
+      "file_name": "20261028_075220_c639_e0354e6141.jpg"
+    },
+    {
+      "image_id": 10,
+      "matched": 2,
+      "gt": 2,
+      "false_positives": 0,
+      "file_name": "20261028_075220_c639_e468ada2e4.jpg"
+    },
+    {
+      "image_id": 11,
+      "matched": 2,
+      "gt": 2,
+      "false_positives": 0,
+      "file_name": "20261028_075220_c639_e7688712e7.jpg"
+    },
+    {
+      "image_id": 12,
+      "matched": 2,
+      "gt": 2,
+      "false_positives": 0,
+      "file_name": "20261028_075220_c639_ed93ff80c5.jpg"
+    }
+  ]
+}

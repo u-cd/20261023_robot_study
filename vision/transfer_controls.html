@@ -1,0 +1,109 @@
+<section id="transfer-section">
+<h2>スポンジをつかんでターゲットへ運ぶ</h2>
+<p>スポンジの接地点とターゲット中心を指定します。高さは計算上の仮値です。</p>
+<div class="row"><label>把持X <input id="transfer-px" type="number" required style="width:75px"></label><label>把持Y <input id="transfer-py" type="number" required style="width:75px"></label><button id="transfer-pick-click">映像で把持位置を指定</button></div>
+<div class="row"><label>置き先X <input id="transfer-tx" type="number" required style="width:75px"></label><label>置き先Y <input id="transfer-ty" type="number" required style="width:75px"></label><button id="transfer-place-click">映像で置き先を指定</button></div>
+<p class="muted">スポンジ上面ではなく、中心の真下にある紙面位置を指定してください。高さによる画像のずれは自動補正しません。</p>
+<div class="row"><label>把持Z [mm] <input id="transfer-pz" type="number" required value="15" min="1" max="79" style="width:75px"></label><label>搬送Z <input id="transfer-cz" type="number" required value="40" min="2" max="80" style="width:75px"></label><label>解放Z <input id="transfer-rz" type="number" required value="15" min="1" max="79" style="width:75px"></label></div>
+<button id="transfer-plan">搬送候補を計算（動きません）</button>
+<p id="transfer-state" role="status">座標を指定して計算してください。計画は写真と一緒に保存します。</p>
+<ol id="transfer-stages"></ol>
+<p><label><input id="transfer-watch" type="checkbox">実機の前にいて、現在の段階の動作と接触を確認できます</label></p>
+<button id="transfer-run" class="jog" disabled>押している間、この段階へ進む</button>
+<p class="muted">離すと追加の1°指令を止めます。送信済みの1°は完了する場合があります。関節は1つずつ動きます。次の段階へは自動で進みません。異常時は離して、既存の「全関節 停止・保持」を使ってください。</p>
+<div class="row"><button id="transfer-record" disabled>この段階の状態と写真を保存</button><button id="transfer-next" disabled>確認して次の段階へ</button></div>
+</section>
+<script>
+let transferPlan=null,transferIndex=0,transferWaypoint=0,transferRun=0,transferWorking=false,transferClick=null,transferCandidate=null;
+const transferState=document.getElementById('transfer-state');
+const transferFields=['transfer-px','transfer-py','transfer-tx','transfer-ty','transfer-pz','transfer-cz','transfer-rz'];
+async function transferFetch(action,data){
+ const response=await fetch('/transfer/'+action,{method:'POST',headers:{'Content-Type':'application/json','X-Arm-Token':'__TOKEN__'},body:JSON.stringify(data)});
+ const value=await response.json();if(!response.ok)throw Error(value.error);return value;
+}
+function stopTransfer(){transferRun++;}
+function invalidateTransfer(){stopTransfer();transferPlan=null;transferCandidate=null;for(const id of ['transfer-run','transfer-record','transfer-next'])document.getElementById(id).disabled=true;document.getElementById('transfer-stages').replaceChildren();}
+for(const id of transferFields)document.getElementById(id).oninput=()=>{invalidateTransfer();transferState.textContent='座標・高さを変更しました。再計算してください。';};
+document.getElementById('transfer-pick-click').onclick=()=>{transferClick='pick';transferState.textContent='映像で、スポンジ中心の真下にある紙面位置をクリックしてください。';};
+document.getElementById('transfer-place-click').onclick=()=>{transferClick='place';transferState.textContent='映像でターゲット中心をクリックしてください。';};
+document.getElementById('live-camera').addEventListener('click',async event=>{
+ if(!transferClick||transferWorking||busy||held)return;
+ const image=event.currentTarget,rect=image.getBoundingClientRect();
+ const which=transferClick;transferClick=null;
+ try{
+  const p=await transferFetch('point',{u:(event.clientX-rect.left)*image.naturalWidth/rect.width,v:(event.clientY-rect.top)*image.naturalHeight/rect.height});
+  invalidateTransfer();
+  document.getElementById(which==='pick'?'transfer-px':'transfer-tx').value=p.xy_mm[0].toFixed(1);
+  document.getElementById(which==='pick'?'transfer-py':'transfer-ty').value=p.xy_mm[1].toFixed(1);
+  transferState.textContent='紙面座標を入力しました：'+p.xy_mm.map(x=>x.toFixed(1)).join(', ')+'mm';
+ }catch(error){transferState.textContent=error.message;}
+});
+function showTransferStage(){
+ transferWaypoint=0;
+ const stage=transferPlan.stages[transferIndex];transferCandidate=stage;
+ transferState.textContent=(transferIndex+1)+' / '+transferPlan.stages.length+'：'+stage.name+' / 候補 '+stage.all_commands_deg.join(', ')+'°';
+ document.getElementById('transfer-watch').checked=false;
+ for(const id of ['transfer-run','transfer-record','transfer-next'])document.getElementById(id).disabled=false;
+ Array.from(document.getElementById('transfer-stages').children).forEach((li,i)=>li.style.fontWeight=i===transferIndex?'bold':'normal');
+}
+document.getElementById('transfer-plan').onclick=async()=>{
+ if(transferWorking||busy||held)return;
+ for(const id of transferFields)if(!document.getElementById(id).reportValidity())return;
+ invalidateTransfer();transferWorking=true;busy=true;render();
+ for(const id of [...transferFields,'transfer-plan'])document.getElementById(id).disabled=true;
+ try{
+  transferPlan=await transferFetch('preview',{pick_xy:['transfer-px','transfer-py'].map(id=>Number(document.getElementById(id).value)),place_xy:['transfer-tx','transfer-ty'].map(id=>Number(document.getElementById(id).value)),pick_z:Number(document.getElementById('transfer-pz').value),travel_z:Number(document.getElementById('transfer-cz').value),release_z:Number(document.getElementById('transfer-rz').value)});
+  transferIndex=0;
+  for(const stage of transferPlan.stages){const li=document.createElement('li');li.textContent=stage.name+'：'+stage.all_commands_deg.join(', ')+'°';document.getElementById('transfer-stages').append(li);}
+  showTransferStage();
+ }catch(error){transferState.textContent=error.message;}finally{
+  transferWorking=false;busy=false;render();for(const id of [...transferFields,'transfer-plan'])document.getElementById(id).disabled=false;
+ }
+};
+function sameTransferPose(state,target){return state.connected&&state.joints.length===5&&state.joints.every(j=>j.active&&j.angle===j.target&&j.angle===target[j.joint-1]);}
+const transferButton=document.getElementById('transfer-run');
+transferButton.addEventListener('pointerdown',async event=>{
+ event.preventDefault();if(!transferPlan||transferWorking||busy||held)return;
+ if(!document.getElementById('transfer-watch').checked){transferState.textContent='実機を確認できる場合にチェックしてください。';return;}
+ transferButton.setPointerCapture(event.pointerId);const run=++transferRun,guard=epoch;
+ transferWorking=true;busy=true;render();
+ try{
+  const waypoints=transferPlan.stages[transferIndex].waypoints;
+  for(let w=transferWaypoint;w<waypoints.length;w++){
+   const waypoint=waypoints[w];
+   while(run===transferRun&&guard===epoch&&!document.hidden){
+    const state=await enqueue({action:'status'},guard);if(!state)return;
+    if(sameTransferPose(state,waypoint.all_commands_deg))break;
+    if(state.joints.length!==5||!state.joints.every(j=>j.active&&j.angle===j.target))throw Error('全関節を保持・静止させてください。');
+    if(state.joints.find(j=>j.joint===4).angle!==80)throw Error('手首80°を保ってください。');
+    const item=state.joints.find(j=>j.angle!==waypoint.all_commands_deg[j.joint-1]);
+    if(run!==transferRun||guard!==epoch||document.hidden)return;
+    await enqueue({action:'fine_step',joint:item.joint,direction:waypoint.all_commands_deg[item.joint-1]>item.angle?'+':'-'},guard);
+   }
+   if(run!==transferRun||guard!==epoch||document.hidden)return;
+   transferWaypoint=w+1;
+  }
+  transferState.textContent='候補角度に到達しました。実際の把持・持ち上がり・放した位置を確認し、写真を保存してください。';
+ }catch(error){transferState.textContent=error.message;}finally{transferWorking=false;busy=false;render();}
+});
+for(const name of ['pointerup','pointercancel','lostpointercapture','pointerleave'])transferButton.addEventListener(name,stopTransfer);
+window.addEventListener('blur',stopTransfer);document.addEventListener('visibilitychange',()=>{if(document.hidden)stopTransfer();});
+document.getElementById('transfer-watch').onchange=()=>{if(!document.getElementById('transfer-watch').checked)stopTransfer();};
+document.getElementById('transfer-next').onclick=async()=>{
+ if(!transferPlan||transferWorking||busy||held)return;
+ try{
+  const state=await enqueue({action:'status'});
+  if(!sameTransferPose(state,transferPlan.stages[transferIndex].all_commands_deg))throw Error('現在の段階の候補角度に到達していません。');
+  if(!document.getElementById('transfer-watch').checked)throw Error('実機の状態を確認してください。');
+  if(transferIndex+1===transferPlan.stages.length){transferState.textContent='最後の退避候補まで完了しました。搬送の成否は保存写真と実機で確認してください。';return;}
+  transferIndex++;showTransferStage();
+ }catch(error){transferState.textContent=error.message;}
+};
+document.getElementById('transfer-record').onclick=async()=>{
+ if(!transferPlan||transferWorking||busy||held)return;
+ if(!document.getElementById('transfer-watch').checked){transferState.textContent='実機を確認してください。';return;}
+ transferWorking=true;busy=true;render();
+ try{const r=await transferFetch('record',{plan_id:transferPlan.plan_id,index:transferIndex,confirmed:true});transferState.textContent='保存しました：'+r.path;}
+ catch(error){transferState.textContent=error.message;}finally{transferWorking=false;busy=false;render();}
+};
+</script>

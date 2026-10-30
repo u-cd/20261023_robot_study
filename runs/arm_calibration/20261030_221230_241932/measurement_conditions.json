@@ -1,0 +1,7 @@
+{
+  "height_mode": "hover_unmeasured",
+  "paper_contact": false,
+  "clearance_mm": null,
+  "tip": "center of closed gripper tip",
+  "source": "User clarification on 2026-10-30: hovering immediately above the paper, not touching."
+}

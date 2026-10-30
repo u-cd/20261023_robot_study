@@ -1,0 +1,50 @@
+{
+  "date": "2026-10-28",
+  "deimv2_commit": "f005f50ce565e63f6c298feccb51901a98c3d035",
+  "config": {
+    "dataset": "data/sponge_evaluation",
+    "output": "runs/sponge_comparison",
+    "models": [
+      "yolo11n",
+      "deim_n",
+      "yolo11s",
+      "deim_s",
+      "deimv2_s",
+      "deimv2_m"
+    ],
+    "epochs": 20,
+    "image_size": 320,
+    "batch_size": 2,
+    "threads": 4,
+    "seed": 42,
+    "confidence_threshold": 0.25,
+    "iou_threshold": 0.5,
+    "validation_session": "20261028_073737_b805",
+    "test_sessions": [
+      "20261028_075220_c639",
+      "20261028_063549_09d5"
+    ]
+  },
+  "pretrained_sha256": {
+    "deimv2_dinov3_s_coco.pth": "9491ab33b68ecfc0e34043abb3009599ab1e892fb953a1faad12ef4fca5a35c4",
+    "deimv2_dinov3_m_coco.pth": "3ef951bfc71b177df65009d97506b3ed50a3b3b306729cc4584e37dc222c6706"
+  },
+  "notes": [
+    "Official DINOv3 S/M variants, not the HGNetv2 alternatives.",
+    "Same existing 36/12/12 session split; previous four models preserved.",
+    "Official ImageNet normalization; matcher switches at epoch index 15 for the shortened 20-epoch run.",
+    "Both backbone and detection head fine-tuned from official full COCO detector weights."
+  ],
+  "source_sha256": {
+    "vision/train_deim_test.py": "691778a2da5e9c629ae3210a14cba11f3a55a7cd16e089de23f93c1e2d460353",
+    "vision/prepare_training_test.py": "52060ef782ec4b0c4464733f8e5dff8d31b2ca12ce440e77c5b8d588dcefceb9",
+    "vision/train_detector.py": "ed364a3fe4854ac41ee3927ce3601f3ee1be66936c6deb385c30aa36e2956ce9",
+    "vision/collect_sponge.py": "434380d01cc8f97eacdeb5fc04aee2d0cbae9a40314a38f55efb3702f9470329",
+    "vision/run_experiments.py": "c979d47438455ad778eb8d36741b55c67019a4b0759fbdc696024ccb8593e551",
+    "vision/evaluate_detectors.py": "06abcc5ac13e29346341f83a3f6aa071e7382197c28479177701eb62999fdbc1",
+    "vision/train_yolo_test.py": "fe86b0b58779d14aaa8820e0a27e81e5ab8ed5c109aefca5c231f4529810214f",
+    "vision/build_result_viewer.py": "666176bca71a7ad7ebe3e74db534be19f002c0e9ab035bd48f7958cfe5c08e7f",
+    "vision/summarize_experiments.py": "cfccde9394af90c56a260aa5bfc1cf767db90125150c6affcaabb65816e4a7ef",
+    "configs/vision_experiment.json": "6a6a81bca4ada941e1aabd83595c222b3b20afcb206f1f822d10924828228386"
+  }
+}

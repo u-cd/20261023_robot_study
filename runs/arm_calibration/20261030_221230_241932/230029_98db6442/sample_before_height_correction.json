@@ -1,0 +1,116 @@
+{
+  "sample_id": "230029_98db6442",
+  "recorded_at": "2026-10-30T14:00:29.582940+00:00",
+  "point_number": 22,
+  "reference_xyz_mm": [
+    0.0,
+    90.0,
+    0
+  ],
+  "reference_frame": "calibration_rectangle",
+  "tip": "center of closed gripper tip",
+  "joint_command_degrees": [
+    71,
+    137,
+    51,
+    80,
+    150
+  ],
+  "joint_status_before": [
+    {
+      "joint": 1,
+      "active": true,
+      "angle": 71,
+      "target": 71,
+      "speed": 25
+    },
+    {
+      "joint": 2,
+      "active": true,
+      "angle": 137,
+      "target": 137,
+      "speed": 25
+    },
+    {
+      "joint": 3,
+      "active": true,
+      "angle": 51,
+      "target": 51,
+      "speed": 25
+    },
+    {
+      "joint": 4,
+      "active": true,
+      "angle": 80,
+      "target": 80,
+      "speed": 25
+    },
+    {
+      "joint": 5,
+      "active": true,
+      "angle": 150,
+      "target": 150,
+      "speed": 25
+    }
+  ],
+  "joint_status_after": [
+    {
+      "joint": 1,
+      "active": true,
+      "angle": 71,
+      "target": 71,
+      "speed": 25
+    },
+    {
+      "joint": 2,
+      "active": true,
+      "angle": 137,
+      "target": 137,
+      "speed": 25
+    },
+    {
+      "joint": 3,
+      "active": true,
+      "angle": 51,
+      "target": 51,
+      "speed": 25
+    },
+    {
+      "joint": 4,
+      "active": true,
+      "angle": 80,
+      "target": 80,
+      "speed": 25
+    },
+    {
+      "joint": 5,
+      "active": true,
+      "angle": 150,
+      "target": 150,
+      "speed": 25
+    }
+  ],
+  "joint_angles_measured": false,
+  "contact_and_stillness_confirmed_by_user": true,
+  "approach": "unspecified",
+  "note": "",
+  "repeat_for_point": 1,
+  "calibration_sha256": "4e20422c8fed118fbeec8af4b6ceffc7b01db64f218234529ce40c4c39ae1a05",
+  "capture": {
+    "captured_at": "2026-10-30T14:00:29.415897+00:00",
+    "camera": "/dev/v4l/by-id/usb-EMEET_EMEET_SmartCam_C960_A251209000118420-video-index0",
+    "image_size": [
+      640,
+      480
+    ],
+    "reference_target_px": [
+      231.07001956480042,
+      241.83822525075678
+    ],
+    "transport": "shared_live_camera",
+    "sequence": 5562
+  },
+  "raw_image": "raw.png",
+  "marked_image": "marked.png",
+  "note_on_position": "Reference grid location manually aligned by user; actual tip position not automatically measured."
+}

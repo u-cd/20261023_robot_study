@@ -1,0 +1,28 @@
+{
+  "date": "2026-10-28",
+  "purpose": "trainability only, not model ranking",
+  "train_images": 48,
+  "val_images": 12,
+  "epochs": 1,
+  "imgsz": 320,
+  "batch": 2,
+  "device": "cpu",
+  "threads": 4,
+  "deim_commit": "09d35d53d39ee3145a1e61e3a989b28b9468d1dd",
+  "results": {
+    "yolo11n": {
+      "exit_code": 0,
+      "wall_seconds": 15.12,
+      "peak_rss_kib": 813748,
+      "weights": "runs/training_test/yolo11n/weights/best.pt"
+    },
+    "deim_dfine_n": {
+      "exit_code": 0,
+      "wall_seconds": 23.72,
+      "peak_rss_kib": 1111864,
+      "weights": "runs/training_test/deim_n/last.pth",
+      "finite_checkpoint": true,
+      "changed_tensors": 577
+    }
+  }
+}

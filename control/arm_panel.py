@@ -15,7 +15,8 @@ import serial
 class ArmConnection:
     def __init__(self):
         self.port = None
-        self.lock = threading.Lock()
+        self.lock = threading.RLock()
+        self.last_motion_at = 0.0
 
     def command(self, text):
         if self.port is None:
@@ -103,6 +104,8 @@ class ArmConnection:
                     message = self.command(command)
                 else:
                     raise ValueError("未知の操作です。")
+                if action in ("connect", "start", "step", "jog", "off", "stop"):
+                    self.last_motion_at = time.monotonic()
                 return {"connected": True, "joints": self.status(),
                         "message": " / ".join(message)}
             except ValueError:
@@ -118,10 +121,25 @@ class ArmConnection:
 def main():
     parser = argparse.ArgumentParser(description="ローカルブラウザで5関節を個別操作")
     parser.add_argument("--http-port", type=int, default=8765)
+    parser.add_argument("--record-calibration", action="store_true", help="紙上の位置・関節指令・写真の記録欄を表示")
+    parser.add_argument("--calibration", type=Path, default=Path(__file__).resolve().parents[1]/"configs/table_calibration.json")
     args = parser.parse_args()
+    if __package__:
+        from .fine_step import fine_step
+    else:
+        from fine_step import fine_step
     arm = ArmConnection()
+    recorder = None
+    if args.record_calibration:
+        if __package__:
+            from .arm_calibration import CalibrationRecorder
+        else:
+            from arm_calibration import CalibrationRecorder
+        recorder = CalibrationRecorder(arm, args.calibration)
     token = secrets.token_urlsafe(32)
     page = Path(__file__).with_name("arm_panel.html").read_text().replace("__TOKEN__", token)
+    options = recorder.point_options() if recorder else []
+    page = page.replace("__CALIBRATION_POINTS__", json.dumps(options))
 
     class Handler(BaseHTTPRequestHandler):
         def respond(self, code, content, mime="application/json"):
@@ -135,6 +153,17 @@ def main():
             self.wfile.write(body)
 
         def do_GET(self):
+            if self.path.startswith("/calibration-image/") and recorder:
+                sample_id = self.path.removeprefix("/calibration-image/")
+                if sample_id in recorder.samples:
+                    content = (recorder.session/sample_id/"marked.png").read_bytes()
+                    self.send_response(200)
+                    self.send_header("Content-Type", "image/png")
+                    self.send_header("Content-Length", str(len(content)))
+                    self.send_header("Cache-Control", "no-store")
+                    self.end_headers()
+                    self.wfile.write(content)
+                    return
             if self.path != "/":
                 self.respond(404, "{}")
                 return
@@ -151,7 +180,15 @@ def main():
                 data = json.loads(self.rfile.read(length))
                 if not isinstance(data, dict):
                     raise ValueError("操作が不正です。")
-                result = arm.action(data)
+                if data.get("action") == "record_calibration":
+                    if recorder is None:
+                        raise ValueError("校正記録モードで起動してください。")
+                    result = recorder.record(data)
+                elif data.get("action") == "fine_step":
+                    with arm.lock:
+                        result = fine_step(arm.action, data)
+                else:
+                    result = arm.action(data)
                 self.respond(200, json.dumps(result, ensure_ascii=False))
             except Exception as error:
                 self.respond(400, json.dumps({"error": str(error), "connected": arm.port is not None}, ensure_ascii=False))

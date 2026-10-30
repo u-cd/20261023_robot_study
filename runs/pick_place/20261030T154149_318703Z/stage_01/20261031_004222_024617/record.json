@@ -1,0 +1,203 @@
+{
+  "recorded_at": "2026-10-30T15:42:22.025285+00:00",
+  "preview": {
+    "name": "現在位置の上へ上げる",
+    "target_xyz_mm": [
+      15.283992533008956,
+      86.31401999486764,
+      40.0
+    ],
+    "all_commands_deg": [
+      69,
+      126,
+      66,
+      80,
+      101
+    ],
+    "waypoints": [
+      {
+        "xyz_mm": [
+          15.283992533008956,
+          86.31401999486765,
+          18.485619023983155
+        ],
+        "all_commands_deg": [
+          69,
+          135,
+          63,
+          80,
+          101
+        ]
+      },
+      {
+        "xyz_mm": [
+          15.283992533008956,
+          86.31401999486764,
+          22.788495219186522
+        ],
+        "all_commands_deg": [
+          69,
+          133,
+          63,
+          80,
+          101
+        ]
+      },
+      {
+        "xyz_mm": [
+          15.283992533008956,
+          86.31401999486764,
+          27.091371414389894
+        ],
+        "all_commands_deg": [
+          69,
+          131,
+          64,
+          80,
+          101
+        ]
+      },
+      {
+        "xyz_mm": [
+          15.283992533008956,
+          86.31401999486764,
+          31.39424760959326
+        ],
+        "all_commands_deg": [
+          69,
+          129,
+          64,
+          80,
+          101
+        ]
+      },
+      {
+        "xyz_mm": [
+          15.283992533008956,
+          86.31401999486764,
+          35.697123804796625
+        ],
+        "all_commands_deg": [
+          69,
+          128,
+          65,
+          80,
+          101
+        ]
+      },
+      {
+        "xyz_mm": [
+          15.283992533008956,
+          86.31401999486764,
+          40.0
+        ],
+        "all_commands_deg": [
+          69,
+          126,
+          66,
+          80,
+          101
+        ]
+      }
+    ],
+    "height_verified": false,
+    "model_sha256": "960f8fec383842bc5b5bcef8b7032abfd184bdee86cb4797f585fd5806e9fe67",
+    "plan_id": "20261030T154149_318703Z",
+    "stage_index": 0
+  },
+  "commanded_angles_deg": [
+    69,
+    126,
+    66,
+    80,
+    101
+  ],
+  "frame_captured_at": "2026-10-30T15:42:21.930221+00:00",
+  "frame_sequence": 26240,
+  "status_before": {
+    "connected": true,
+    "joints": [
+      {
+        "joint": 1,
+        "active": true,
+        "angle": 69,
+        "target": 69,
+        "speed": 25
+      },
+      {
+        "joint": 2,
+        "active": true,
+        "angle": 126,
+        "target": 126,
+        "speed": 25
+      },
+      {
+        "joint": 3,
+        "active": true,
+        "angle": 66,
+        "target": 66,
+        "speed": 25
+      },
+      {
+        "joint": 4,
+        "active": true,
+        "angle": 80,
+        "target": 80,
+        "speed": 25
+      },
+      {
+        "joint": 5,
+        "active": true,
+        "angle": 101,
+        "target": 101,
+        "speed": 25
+      }
+    ],
+    "message": ""
+  },
+  "status_after": {
+    "connected": true,
+    "joints": [
+      {
+        "joint": 1,
+        "active": true,
+        "angle": 69,
+        "target": 69,
+        "speed": 25
+      },
+      {
+        "joint": 2,
+        "active": true,
+        "angle": 126,
+        "target": 126,
+        "speed": 25
+      },
+      {
+        "joint": 3,
+        "active": true,
+        "angle": 66,
+        "target": 66,
+        "speed": 25
+      },
+      {
+        "joint": 4,
+        "active": true,
+        "angle": 80,
+        "target": 80,
+        "speed": 25
+      },
+      {
+        "joint": 5,
+        "active": true,
+        "angle": 101,
+        "target": 101,
+        "speed": 25
+      }
+    ],
+    "message": ""
+  },
+  "note": "",
+  "actual_tip_position_mm": null,
+  "actual_error_mm": null,
+  "description": "候補指令と撮影時状態の記録。実測位置・実測誤差ではない。"
+}

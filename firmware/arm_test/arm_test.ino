@@ -142,6 +142,7 @@ void processCommand() {
         commanded[i] = target[i] = angle;
         motors[i].write(angle);
         motors[i].attach(PINS[i]);
+        lastStep[i] = millis();
         active[i] = true;
         Serial.println(F("START accepted (initial movement is not speed-limited)"));
       } else {
@@ -189,7 +190,6 @@ void loop() {
   }
   for (byte i = 0; i < JOINTS; ++i) {
     if (now - lastStep[i] >= (1000UL / speedDps[i])) {
-      lastStep[i] = now;
       if (jogJoint == i) {
         int next = commanded[i] + jogDirection;
         if (next >= MIN_ANGLES[i] && next <= MAX_ANGLES[i]) {
@@ -199,6 +199,9 @@ void loop() {
       if (active[i] && commanded[i] != target[i]) {
         commanded[i] += (target[i] > commanded[i]) ? 1 : -1;
         motors[i].write(commanded[i]);
+        // STEPの待ち時間も実際に指令を変更した時刻から数える。
+        // 停止中まで更新すると、受信したSTEPがほぼ常に無視される。
+        lastStep[i] = now;
       }
     }
   }

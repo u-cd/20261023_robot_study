@@ -1,0 +1,16 @@
+Evaluating deimv2_s
+Training ViT-Tiny from scratch...
+Using Lite Spatial Prior Module with inplanes=16
+     --- Use Gateway@True ---
+     --- Use Share Bbox Head@False ---
+     --- Use Share Score Head@False ---
+     --- Wide Layer@1 ---
+{"deimv2_s": {"map50_95": 0.8932062176789309, "map50": 1.0, "latency_mean_ms": 162.79202858923884, "both_found_images": 12}}
+Evaluating deimv2_m
+Training ViT-Tiny from scratch...
+Using Lite Spatial Prior Module with inplanes=16
+     --- Use Gateway@True ---
+     --- Use Share Bbox Head@False ---
+     --- Use Share Score Head@False ---
+     --- Wide Layer@1 ---
+{"deimv2_m": {"map50_95": 0.8851306117188016, "map50": 0.9965727341964966, "latency_mean_ms": 250.24551869783966, "both_found_images": 12}}

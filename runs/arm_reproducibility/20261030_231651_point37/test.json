@@ -1,0 +1,125 @@
+{
+  "test_type": "commanded_pose_reproduction",
+  "reference_point_number": 37,
+  "recorded_at": "2026-10-30T14:16:51.756111+00:00",
+  "baseline_sample": "/home/u/Desktop/20261023_robot_study/runs/arm_calibration/20261030_221230_241932/230925_b47546bf/sample.json",
+  "baseline_sha256": "2f9e79ea53db9735f9c18d4ca289709af0bd25e5f89204448b19416e871178c9",
+  "expected_joint_command_degrees": [
+    98,
+    155,
+    83,
+    80,
+    150
+  ],
+  "joint_status_before": {
+    "connected": true,
+    "joints": [
+      {
+        "joint": 1,
+        "active": true,
+        "angle": 98,
+        "target": 98,
+        "speed": 25
+      },
+      {
+        "joint": 2,
+        "active": true,
+        "angle": 155,
+        "target": 155,
+        "speed": 25
+      },
+      {
+        "joint": 3,
+        "active": true,
+        "angle": 83,
+        "target": 83,
+        "speed": 25
+      },
+      {
+        "joint": 4,
+        "active": true,
+        "angle": 80,
+        "target": 80,
+        "speed": 25
+      },
+      {
+        "joint": 5,
+        "active": true,
+        "angle": 150,
+        "target": 150,
+        "speed": 25
+      }
+    ],
+    "message": ""
+  },
+  "joint_status_after": {
+    "connected": true,
+    "joints": [
+      {
+        "joint": 1,
+        "active": true,
+        "angle": 98,
+        "target": 98,
+        "speed": 25
+      },
+      {
+        "joint": 2,
+        "active": true,
+        "angle": 155,
+        "target": 155,
+        "speed": 25
+      },
+      {
+        "joint": 3,
+        "active": true,
+        "angle": 83,
+        "target": 83,
+        "speed": 25
+      },
+      {
+        "joint": 4,
+        "active": true,
+        "angle": 80,
+        "target": 80,
+        "speed": 25
+      },
+      {
+        "joint": 5,
+        "active": true,
+        "angle": 150,
+        "target": 150,
+        "speed": 25
+      }
+    ],
+    "message": ""
+  },
+  "commands_match": true,
+  "joint_angles_measured": false,
+  "reference_xy_mm": [
+    30.0,
+    150.0
+  ],
+  "tip": "center of closed gripper tip",
+  "height_condition": "hover_unmeasured",
+  "actual_tip_xyz_mm": null,
+  "position_error_mm": null,
+  "visual_assessment": "User selected matching tip landmarks. Apparent plane-projected displacement about 3.9 mm; true 3D error unmeasured.",
+  "capture": {
+    "captured_at": "2026-10-30T14:16:51.565022+00:00",
+    "camera": "/dev/v4l/by-id/usb-EMEET_EMEET_SmartCam_C960_A251209000118420-video-index0",
+    "image_size": [
+      640,
+      480
+    ],
+    "reference_target_px": [
+      275.25358306625276,
+      179.72679859291597
+    ],
+    "transport": "shared_live_camera",
+    "sequence": 20132
+  },
+  "note": "Recorded after user restored command values only; no movement commands issued by capture script. Actual tip position has not been measured.",
+  "manual_image_measurement_file": "landmark_232514_700250.json",
+  "image_displacement_pixel": 3.5794552658190883,
+  "apparent_paper_plane_displacement_mm": 3.9361267878362534
+}

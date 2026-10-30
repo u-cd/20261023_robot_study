@@ -1,0 +1,14 @@
+{
+  "captured_at": "2026-10-30T13:54:06.914347+00:00",
+  "camera": "/dev/v4l/by-id/usb-EMEET_EMEET_SmartCam_C960_A251209000118420-video-index0",
+  "image_size": [
+    640,
+    480
+  ],
+  "reference_target_px": [
+    276.9226608073,
+    315.5700396993716
+  ],
+  "transport": "shared_live_camera",
+  "sequence": 17928
+}

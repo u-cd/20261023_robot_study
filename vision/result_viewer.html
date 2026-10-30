@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="ja">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>スポンジ認識 — 学習結果の比較</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#f1f4f6;color:#172c3a;font:16px system-ui,sans-serif}header{background:#172c3a;color:white;padding:24px max(20px,calc((100vw - 1500px)/2))}h1{font-size:25px;margin:0 0 8px}p{line-height:1.65;margin:8px 0}main{max-width:1540px;margin:auto;padding:20px}.toolbar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:16px;background:white;border:1px solid #d4dfe6;border-radius:12px;position:sticky;top:0;z-index:2;box-shadow:0 4px 12px #172c3a0d}button,select{font:inherit;padding:9px 12px;border:1px solid #afc1cc;border-radius:7px;background:white;color:inherit}button{cursor:pointer}button:hover{background:#e4f1f5}button:disabled{opacity:.45;cursor:default}select{max-width:100%}label{display:flex;align-items:center;gap:6px}input{width:18px;height:18px;accent-color:#167b89}.legend{display:flex;gap:18px;flex-wrap:wrap;margin:18px 0 8px;font-weight:600}.blue{color:#007da5}.green{color:#057141}.orange{color:#ad5900}.red{color:#b22945}.filename{font-family:monospace;overflow-wrap:anywhere;font-size:14px;color:#506675}.grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;margin-top:16px}.card{background:white;border:1px solid #d4dfe6;border-radius:12px;overflow:hidden}.cardhead{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 16px}.card h2{font-size:19px;margin:0}.stats{font-size:14px;color:#506675;margin-top:4px}.bad{color:#ae3d11;font-weight:700}.good{color:#057141;font-weight:700}canvas{display:block;width:100%;height:auto;background:#e2e8ed}.ground{max-width:760px;margin:16px auto 0}.note{background:#e4eff4;border-radius:10px;padding:14px 18px;margin-top:20px;font-size:14px}dialog{width:min(1300px,96vw);padding:18px;border:0;border-radius:12px;box-shadow:0 8px 50px #0007}dialog::backdrop{background:#071b28bf}.dialoghead{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:12px}dialog p{font-size:14px}.status{font-weight:600;min-width:70px}@media(max-width:760px){.grid{grid-template-columns:1fr}.toolbar{position:static}h1{font-size:22px}main{padding:12px}header{padding:20px}.cardhead{padding:12px}}
+</style>
+<header><h1>スポンジ認識 — 学習結果の比較</h1><p>同じ写真に対する、正解の枠と各モデルの予測を見比べられます。画像の追加撮影・再学習・アームの操作は行いません。</p></header>
+<main>
+<div class="toolbar">
+ <label>画像 <select id="split"><option value="test">最終評価用 12枚</option><option value="val">検証用 12枚</option></select></label>
+ <button id="previous">← 前へ</button><span id="position" class="status"></span><button id="next">次へ →</button>
+ <label>番号 <select id="imageSelect"></select></label>
+ <label><input type="checkbox" id="errorsOnly">誤検出・見落としがある画像だけ</label>
+ <label><input type="checkbox" id="showTruth" checked>正解枠を重ねる</label>
+</div>
+<div class="legend"><span class="blue">青：正解</span><span class="green">緑：正しく検出</span><span class="orange">橙：余計な検出／位置ずれ</span><span class="red">赤の破線：基準を満たす検出なし</span></div>
+<p id="filename" class="filename"></p>
+<section id="ground" class="card ground"></section>
+<div id="cards" class="grid"></div>
+<p id="empty" hidden>該当する画像はありません。</p>
+<div class="note"><p><strong>読み方：</strong>正しいクラスで、正解枠との重なり（IoU）が0.5以上なら「正しく検出」とします。スコアはconfidence 0.25以上を表示。枠が大きくずれた場合は、余計な検出と見落としの両方に数えられます。青い正解枠は人が付けたラベルです。</p><p>左／右キーでも切り替えられます。「拡大」で元画像サイズの枠とスコアを確認できます。この画面の集計は保存済みの評価結果と同じ条件です。mAPは正解率ではありません。推論時間はCPU上で前処理・モデル・後処理を含めた平均値です。</p><p>既存60枚を学習36枚・検証12枚・最終評価12枚に分割し、各20エポック学習しました。同じ机と固定カメラでの結果であり、別の環境や対象がない場面での性能は未確認です。</p></div>
+</main>
+<dialog id="zoom"><div class="dialoghead"><strong id="zoomTitle"></strong><button id="closeZoom">閉じる（Esc）</button></div><canvas id="zoomCanvas"></canvas></dialog>
+<script>
+'use strict';
+const DATA=/*__RESULT_DATA__*/null;
+const $=id=>document.getElementById(id);
+const names=['sponge（スポンジ）','target（置き場所）'];
+const titles={yolo11n:'YOLO11n',yolo11s:'YOLO11s',deim_n:'DEIM-N (v1)',deim_s:'DEIM-S (v1)',deimv2_s:'DEIMv2-S (DINOv3)',deimv2_m:'DEIMv2-M (DINOv3)'};
+let index=0,visible=[],generation=0;
+function selectedSplit(){return DATA.splits[$('split').value]}
+function hasError(frame){return DATA.models.some(n=>frame.models[n].fp||frame.models[n].fn)}
+function refreshList(){visible=selectedSplit().frames.filter(f=>!$('errorsOnly').checked||hasError(f));index=0;$('imageSelect').replaceChildren(...visible.map(f=>{const o=document.createElement('option');o.textContent=`画像 ${f.id}${hasError(f)?' · 要確認':''}`;o.value=f.id;return o}));render()}
+function box(ctx,b,color,label,dashed=false){const [x1,y1,x2,y2]=b;ctx.strokeStyle=color;ctx.lineWidth=2.5;ctx.setLineDash(dashed?[8,5]:[]);ctx.strokeRect(x1,y1,x2-x1,y2-y1);ctx.setLineDash([]);ctx.font='bold 15px system-ui';const w=ctx.measureText(label).width+8;const x=Math.max(0,Math.min(x1,640-w)),y=Math.max(19,y1-4);ctx.fillStyle=color;ctx.fillRect(x,y-18,w,21);ctx.fillStyle='#fff';ctx.fillText(label,x+4,y-2)}
+function paint(canvas,img,frame,model){canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;const c=canvas.getContext('2d');c.drawImage(img,0,0);if(!model||$('showTruth').checked)for(const g of frame.truth)box(c,g.box,'#008ab1',`正解 ${names[g.cls]}`);if(model){const m=frame.models[model];for(const b of m.boxes)box(c,b.box,b.ok?'#108147':'#bf6100',`${b.ok?'検出':'要確認'} ${names[b.cls]} ${b.score.toFixed(2)}`);for(const g of m.missed)box(c,g.box,'#c62f4a',`未検出 ${names[g.cls]}`,true)}}
+function card(frame,img,model){const el=document.createElement('section');el.className='card';const head=document.createElement('div');head.className='cardhead';const description=document.createElement('div');const heading=document.createElement('h2');heading.textContent=model?titles[model]:'正解の枠';description.append(heading);const stats=document.createElement('div');stats.className='stats';if(model){const m=frame.models[model],s=selectedSplit().summary[model];const counts=document.createElement('span');counts.className=(m.fp||m.fn)?'bad':'good';counts.textContent=`正しい検出 ${m.tp} ／ 余計 ${m.fp} ／ 見落とし ${m.fn}`;stats.append(counts,document.createElement('br'),document.createTextNode(`全体mAP50–95 ${(s.map50_95*100).toFixed(1)}% · 平均 ${s.latency_mean_ms.toFixed(1)} ms/枚`))}else stats.textContent='人が付けたラベル。予測と見比べてください。';description.append(stats);const enlarge=document.createElement('button');enlarge.textContent='拡大';enlarge.onclick=()=>{$('zoomTitle').textContent=`画像 ${frame.id} / ${model?titles[model]:'正解の枠'}`;paint($('zoomCanvas'),img,frame,model);$('zoom').showModal()};head.append(description,enlarge);const canvas=document.createElement('canvas');paint(canvas,img,frame,model);el.append(head,canvas);return el}
+function render(){const token=++generation;const f=visible[index];$('previous').disabled=!f||index===0;$('next').disabled=!f||index===visible.length-1;$('position').textContent=f?`${index+1} / ${visible.length}`:'0 / 0';$('empty').hidden=!!f;$('cards').replaceChildren();$('ground').replaceChildren();$('ground').hidden=!f;if(!f){$('filename').textContent='';return}$('imageSelect').value=f.id;$('filename').textContent=`画像 ${f.id} · ${f.name}`;const img=new Image();img.onload=()=>{if(token!==generation)return;const gt=card(f,img,null);$('ground').replaceChildren(...gt.childNodes);for(const model of DATA.models)$('cards').append(card(f,img,model))};img.src=f.image}
+$('previous').onclick=()=>{if(index>0){index--;render()}};$('next').onclick=()=>{if(index+1<visible.length){index++;render()}};$('imageSelect').onchange=()=>{index=visible.findIndex(f=>String(f.id)===$('imageSelect').value);render()};$('split').onchange=refreshList;$('errorsOnly').onchange=refreshList;$('showTruth').onchange=render;$('closeZoom').onclick=()=>$('zoom').close();document.addEventListener('keydown',e=>{if($('zoom').open||['INPUT','SELECT'].includes(document.activeElement.tagName))return;if(e.key==='ArrowLeft'){$('previous').click();e.preventDefault()}if(e.key==='ArrowRight'){$('next').click();e.preventDefault()}});refreshList();
+</script>
+</html>

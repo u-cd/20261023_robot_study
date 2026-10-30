@@ -1,0 +1,245 @@
+{
+  "recorded_at": "2026-10-30T15:42:42.068144+00:00",
+  "preview": {
+    "name": "スポンジの上へ移動",
+    "target_xyz_mm": [
+      10.0,
+      42.0,
+      40.0
+    ],
+    "all_commands_deg": [
+      49,
+      135,
+      80,
+      80,
+      101
+    ],
+    "waypoints": [
+      {
+        "xyz_mm": [
+          14.696882251563515,
+          81.3902399954379,
+          40.0
+        ],
+        "all_commands_deg": [
+          67,
+          127,
+          66,
+          80,
+          101
+        ]
+      },
+      {
+        "xyz_mm": [
+          14.109771970118079,
+          76.46645999600815,
+          40.0
+        ],
+        "all_commands_deg": [
+          64,
+          127,
+          67,
+          80,
+          101
+        ]
+      },
+      {
+        "xyz_mm": [
+          13.522661688672638,
+          71.54267999657843,
+          40.0
+        ],
+        "all_commands_deg": [
+          62,
+          128,
+          68,
+          80,
+          101
+        ]
+      },
+      {
+        "xyz_mm": [
+          12.935551407227198,
+          66.61889999714869,
+          40.0
+        ],
+        "all_commands_deg": [
+          60,
+          129,
+          70,
+          80,
+          101
+        ]
+      },
+      {
+        "xyz_mm": [
+          12.348441125781758,
+          61.69511999771895,
+          40.0
+        ],
+        "all_commands_deg": [
+          57,
+          130,
+          71,
+          80,
+          101
+        ]
+      },
+      {
+        "xyz_mm": [
+          11.761330844336317,
+          56.771339998289214,
+          40.0
+        ],
+        "all_commands_deg": [
+          55,
+          131,
+          73,
+          80,
+          101
+        ]
+      },
+      {
+        "xyz_mm": [
+          11.17422056289088,
+          51.84755999885948,
+          40.0
+        ],
+        "all_commands_deg": [
+          53,
+          132,
+          75,
+          80,
+          101
+        ]
+      },
+      {
+        "xyz_mm": [
+          10.58711028144544,
+          46.92377999942974,
+          40.0
+        ],
+        "all_commands_deg": [
+          51,
+          133,
+          78,
+          80,
+          101
+        ]
+      },
+      {
+        "xyz_mm": [
+          10.0,
+          42.0,
+          40.0
+        ],
+        "all_commands_deg": [
+          49,
+          135,
+          80,
+          80,
+          101
+        ]
+      }
+    ],
+    "height_verified": false,
+    "model_sha256": "960f8fec383842bc5b5bcef8b7032abfd184bdee86cb4797f585fd5806e9fe67",
+    "plan_id": "20261030T154149_318703Z",
+    "stage_index": 1
+  },
+  "commanded_angles_deg": [
+    49,
+    135,
+    80,
+    80,
+    101
+  ],
+  "frame_captured_at": "2026-10-30T15:42:41.988486+00:00",
+  "frame_sequence": 26536,
+  "status_before": {
+    "connected": true,
+    "joints": [
+      {
+        "joint": 1,
+        "active": true,
+        "angle": 49,
+        "target": 49,
+        "speed": 25
+      },
+      {
+        "joint": 2,
+        "active": true,
+        "angle": 135,
+        "target": 135,
+        "speed": 25
+      },
+      {
+        "joint": 3,
+        "active": true,
+        "angle": 80,
+        "target": 80,
+        "speed": 25
+      },
+      {
+        "joint": 4,
+        "active": true,
+        "angle": 80,
+        "target": 80,
+        "speed": 25
+      },
+      {
+        "joint": 5,
+        "active": true,
+        "angle": 101,
+        "target": 101,
+        "speed": 25
+      }
+    ],
+    "message": ""
+  },
+  "status_after": {
+    "connected": true,
+    "joints": [
+      {
+        "joint": 1,
+        "active": true,
+        "angle": 49,
+        "target": 49,
+        "speed": 25
+      },
+      {
+        "joint": 2,
+        "active": true,
+        "angle": 135,
+        "target": 135,
+        "speed": 25
+      },
+      {
+        "joint": 3,
+        "active": true,
+        "angle": 80,
+        "target": 80,
+        "speed": 25
+      },
+      {
+        "joint": 4,
+        "active": true,
+        "angle": 80,
+        "target": 80,
+        "speed": 25
+      },
+      {
+        "joint": 5,
+        "active": true,
+        "angle": 101,
+        "target": 101,
+        "speed": 25
+      }
+    ],
+    "message": ""
+  },
+  "note": "",
+  "actual_tip_position_mm": null,
+  "actual_error_mm": null,
+  "description": "候補指令と撮影時状態の記録。実測位置・実測誤差ではない。"
+}

@@ -1,0 +1,639 @@
+{
+  "parameters": [
+    -99.23657311813155,
+    111.65972275364844,
+    -1.422086293932229,
+    15.000000000000002,
+    75.54609434947879,
+    83.52173697150559,
+    3.172893229618844,
+    3.6981158588098624
+  ],
+  "signs": [
+    -1,
+    1
+  ],
+  "errors_mm": [
+    3.604300552389844,
+    4.449213855418504,
+    10.033887627301224,
+    4.003032762818218,
+    6.744225594695315,
+    4.994469745672189,
+    5.103977785947978,
+    4.878534109385144,
+    1.5781251640243392,
+    3.374417242940453,
+    3.295867208593084
+  ],
+  "rmse_mm": 5.174320871104581,
+  "max_error_mm": 10.033887627301224,
+  "jacobian_rank": 8,
+  "column_normalized_condition_number": 80.61467657868968,
+  "bound_parameters": [
+    "shoulder_height_mm"
+  ],
+  "optimizer_success": true,
+  "schema_version": 1,
+  "created_at": "2026-10-30T14:49:18.391314+00:00",
+  "model_type": "effective_base_yaw_plus_relative_two_link",
+  "coordinate_frame": "calibration_rectangle",
+  "units": "mm",
+  "wrist_fixed_deg": 80,
+  "calibration_gripper_deg": 150,
+  "calculation_plane_z_mm": 0,
+  "height_assumption": "User authorized treating all 11 hover samples as Z=0. Raw height observations remain unknown.",
+  "parameter_names": [
+    "base_x_mm",
+    "base_y_mm",
+    "base_yaw_rad",
+    "shoulder_height_mm",
+    "effective_upper_length_mm",
+    "effective_distal_length_mm",
+    "shoulder_offset_rad",
+    "elbow_offset_rad"
+  ],
+  "reference_xy_mm": [
+    [
+      0.0,
+      0.0
+    ],
+    [
+      0.0,
+      30.0
+    ],
+    [
+      30.0,
+      30.0
+    ],
+    [
+      0.0,
+      60.0
+    ],
+    [
+      30.0,
+      60.0
+    ],
+    [
+      0.0,
+      90.0
+    ],
+    [
+      30.0,
+      90.0
+    ],
+    [
+      0.0,
+      120.0
+    ],
+    [
+      30.0,
+      120.0
+    ],
+    [
+      0.0,
+      150.0
+    ],
+    [
+      30.0,
+      150.0
+    ]
+  ],
+  "reference_commands_deg": [
+    [
+      34.0,
+      168.0,
+      109.0
+    ],
+    [
+      43.0,
+      152.0,
+      76.0
+    ],
+    [
+      47.0,
+      168.0,
+      117.0
+    ],
+    [
+      56.0,
+      142.0,
+      59.0
+    ],
+    [
+      57.0,
+      159.0,
+      92.0
+    ],
+    [
+      71.0,
+      137.0,
+      51.0
+    ],
+    [
+      74.0,
+      154.0,
+      82.0
+    ],
+    [
+      86.0,
+      133.0,
+      46.0
+    ],
+    [
+      85.0,
+      152.0,
+      78.0
+    ],
+    [
+      102.0,
+      138.0,
+      50.0
+    ],
+    [
+      98.0,
+      155.0,
+      83.0
+    ]
+  ],
+  "samples": [
+    {
+      "point": 1,
+      "path": "/home/u/Desktop/20261023_robot_study/runs/arm_calibration/20261030_221230_241932/224347_7d9c82c2/sample.json",
+      "sha256": "96d5dc1ac23d3c922f66238d5b961395688b1cd6304ebd85afdf6e0e8f7f1b8a",
+      "assumed_xyz_mm": [
+        0.0,
+        0.0,
+        0.0
+      ],
+      "predicted_xyz_mm": [
+        1.3746483160695533,
+        1.940516231128555,
+        -2.708453661374236
+      ],
+      "error_mm": 3.604300552389844
+    },
+    {
+      "point": 8,
+      "path": "/home/u/Desktop/20261023_robot_study/runs/arm_calibration/20261030_221230_241932/225040_2f2a7888/sample.json",
+      "sha256": "ba2f305919be652499b5244f72bb02b19a60d8124cab4a684ad0de217d950c68",
+      "assumed_xyz_mm": [
+        0.0,
+        30.0,
+        0.0
+      ],
+      "predicted_xyz_mm": [
+        0.43033295794124626,
+        32.43917091037467,
+        -3.696046908054541
+      ],
+      "error_mm": 4.449213855418504
+    },
+    {
+      "point": 9,
+      "path": "/home/u/Desktop/20261023_robot_study/runs/arm_calibration/20261030_221230_241932/225406_56e41aa4/sample.json",
+      "sha256": "1a17e31a45db9ed55e801e6031a27f86fd97bcebc2b107ae19611c2d909b5b3b",
+      "assumed_xyz_mm": [
+        30.0,
+        30.0,
+        0.0
+      ],
+      "predicted_xyz_mm": [
+        26.96975583046263,
+        24.986846298983423,
+        8.14646003858591
+      ],
+      "error_mm": 10.033887627301224
+    },
+    {
+      "point": 15,
+      "path": "/home/u/Desktop/20261023_robot_study/runs/arm_calibration/20261030_221230_241932/225718_e4de6c2c/sample.json",
+      "sha256": "0d76e6a27cf4ac1e3e8cd001f07a1ae226c6cac34861bf594cdae810732c7cb2",
+      "assumed_xyz_mm": [
+        0.0,
+        60.0,
+        0.0
+      ],
+      "predicted_xyz_mm": [
+        2.311162677593231,
+        63.26843579110902,
+        0.011218613715463732
+      ],
+      "error_mm": 4.003032762818218
+    },
+    {
+      "point": 16,
+      "path": "/home/u/Desktop/20261023_robot_study/runs/arm_calibration/20261030_221230_241932/225830_2f80b2a4/sample.json",
+      "sha256": "460f4fe53cfb14df859beb777b0654c3a30229b5d1af8f307d17350b1424f2eb",
+      "assumed_xyz_mm": [
+        30.0,
+        60.0,
+        0.0
+      ],
+      "predicted_xyz_mm": [
+        27.667668598963175,
+        53.88084009139897,
+        -1.6126658428982878
+      ],
+      "error_mm": 6.744225594695315
+    },
+    {
+      "point": 22,
+      "path": "/home/u/Desktop/20261023_robot_study/runs/arm_calibration/20261030_221230_241932/230029_98db6442/sample.json",
+      "sha256": "a3b5070c058a4041883228549642113f374658a36181796ea108ea3af477aad8",
+      "assumed_xyz_mm": [
+        0.0,
+        90.0,
+        0.0
+      ],
+      "predicted_xyz_mm": [
+        3.6815846242863017,
+        92.62297600531991,
+        2.1238313422137622
+      ],
+      "error_mm": 4.994469745672189
+    },
+    {
+      "point": 23,
+      "path": "/home/u/Desktop/20261023_robot_study/runs/arm_calibration/20261030_221230_241932/230129_2048cd43/sample.json",
+      "sha256": "2a0b7a2e455ae39dbc6f0ca69d4e202774f2465ebca31acc9564f8b1e51d9b29",
+      "assumed_xyz_mm": [
+        30.0,
+        90.0,
+        0.0
+      ],
+      "predicted_xyz_mm": [
+        31.99559557511212,
+        94.43034584751231,
+        -1.5621213817990451
+      ],
+      "error_mm": 5.103977785947978
+    },
+    {
+      "point": 29,
+      "path": "/home/u/Desktop/20261023_robot_study/runs/arm_calibration/20261030_221230_241932/230339_0b291cc1/sample.json",
+      "sha256": "7756251db759ca4b65c286c0b2f270d66cc46cf77f5e6ccf55d6ca42f11a1107",
+      "assumed_xyz_mm": [
+        0.0,
+        120.0,
+        0.0
+      ],
+      "predicted_xyz_mm": [
+        0.11248908101347865,
+        119.51435646745091,
+        4.852998209599946
+      ],
+      "error_mm": 4.878534109385144
+    },
+    {
+      "point": 30,
+      "path": "/home/u/Desktop/20261023_robot_study/runs/arm_calibration/20261030_221230_241932/230626_9cdd37fa/sample.json",
+      "sha256": "ab6f18a7428f81f1da00c0cf0c603a199965c939a55173d098a6bbb6e1f8ef0d",
+      "assumed_xyz_mm": [
+        30.0,
+        120.0,
+        0.0
+      ],
+      "predicted_xyz_mm": [
+        29.760516989438102,
+        119.59575403680527,
+        -1.5065563787060299
+      ],
+      "error_mm": 1.5781251640243392
+    },
+    {
+      "point": 36,
+      "path": "/home/u/Desktop/20261023_robot_study/runs/arm_calibration/20261030_221230_241932/230841_7f614f08/sample.json",
+      "sha256": "ceb61c8f695ff6d5bafe808034b5a1fbfa42756006be9cffcf5e3d264d0e0cdd",
+      "assumed_xyz_mm": [
+        0.0,
+        150.0,
+        0.0
+      ],
+      "predicted_xyz_mm": [
+        -2.5411926373422773,
+        147.8520002946657,
+        -0.5613634965465337
+      ],
+      "error_mm": 3.374417242940453
+    },
+    {
+      "point": 37,
+      "path": "/home/u/Desktop/20261023_robot_study/runs/arm_calibration/20261030_221230_241932/230925_b47546bf/sample.json",
+      "sha256": "2f9e79ea53db9735f9c18d4ca289709af0bd25e5f89204448b19416e871178c9",
+      "assumed_xyz_mm": [
+        30.0,
+        150.0,
+        0.0
+      ],
+      "predicted_xyz_mm": [
+        28.23743798645802,
+        149.4687580023696,
+        -2.7338430359206214
+      ],
+      "error_mm": 3.295867208593084
+    }
+  ],
+  "candidate_fits": [
+    {
+      "parameters": [
+        -74.01846392209075,
+        121.69814255670917,
+        -1.5600578655538293,
+        15.000000000000002,
+        153.67694801189762,
+        81.7532199834543,
+        -2.3212879051524578,
+        2.4519875804203863
+      ],
+      "signs": [
+        1,
+        1
+      ],
+      "errors_mm": [
+        25.694981503112693,
+        20.96940424944483,
+        33.325085368495024,
+        19.151682822624256,
+        4.357431734410853,
+        9.653730409162744,
+        4.61277286778548,
+        6.536709970398104,
+        7.784954658460579,
+        13.822980686013826,
+        12.620766308754586
+      ],
+      "rmse_mm": 16.961047051668224,
+      "max_error_mm": 33.325085368495024,
+      "jacobian_rank": 8,
+      "column_normalized_condition_number": 49.10283742620724,
+      "bound_parameters": [
+        "shoulder_height_mm",
+        "shoulder_offset_rad"
+      ],
+      "optimizer_success": true
+    },
+    {
+      "parameters": [
+        -98.37841989438776,
+        71.50479843340811,
+        -1.1205687701501699,
+        15.000000000000002,
+        49.72531473866892,
+        80.55650111608192,
+        -2.3212879051524578,
+        0.6853496770225627
+      ],
+      "signs": [
+        1,
+        -1
+      ],
+      "errors_mm": [
+        18.834296487534836,
+        18.533488572984293,
+        36.775401187946976,
+        30.379462166849567,
+        13.051220991094906,
+        31.253271072558434,
+        9.62273601299951,
+        22.764794135461607,
+        14.935180779149993,
+        12.05032607086182,
+        30.293146097007362
+      ],
+      "rmse_mm": 23.38888952088238,
+      "max_error_mm": 36.775401187946976,
+      "jacobian_rank": 8,
+      "column_normalized_condition_number": 94.83041601735475,
+      "bound_parameters": [
+        "shoulder_height_mm",
+        "shoulder_offset_rad"
+      ],
+      "optimizer_success": true
+    },
+    {
+      "parameters": [
+        -99.23657311813155,
+        111.65972275364844,
+        -1.422086293932229,
+        15.000000000000002,
+        75.54609434947879,
+        83.52173697150559,
+        3.172893229618844,
+        3.6981158588098624
+      ],
+      "signs": [
+        -1,
+        1
+      ],
+      "errors_mm": [
+        3.604300552389844,
+        4.449213855418504,
+        10.033887627301224,
+        4.003032762818218,
+        6.744225594695315,
+        4.994469745672189,
+        5.103977785947978,
+        4.878534109385144,
+        1.5781251640243392,
+        3.374417242940453,
+        3.295867208593084
+      ],
+      "rmse_mm": 5.174320871104581,
+      "max_error_mm": 10.033887627301224,
+      "jacobian_rank": 8,
+      "column_normalized_condition_number": 80.61467657868968,
+      "bound_parameters": [
+        "shoulder_height_mm"
+      ],
+      "optimizer_success": true
+    },
+    {
+      "parameters": [
+        -69.7567218361569,
+        59.90077130869764,
+        -0.9734584972308624,
+        15.000000000000002,
+        122.0781640199677,
+        51.06502305502547,
+        2.932153143350474,
+        -1.0772188433849164
+      ],
+      "signs": [
+        -1,
+        -1
+      ],
+      "errors_mm": [
+        34.139009686537364,
+        21.61802717083998,
+        37.808657522778574,
+        39.87136658495297,
+        21.446138842003354,
+        47.0696379685325,
+        19.26200318067867,
+        46.9549363301263,
+        28.33617737368661,
+        28.174162195961312,
+        49.64734734742589
+      ],
+      "rmse_mm": 35.63054295304208,
+      "max_error_mm": 49.64734734742589,
+      "jacobian_rank": 8,
+      "column_normalized_condition_number": 49.01128237709288,
+      "bound_parameters": [
+        "shoulder_height_mm",
+        "shoulder_offset_rad"
+      ],
+      "optimizer_success": true
+    }
+  ],
+  "leave_one_point_out": [
+    {
+      "point": 1,
+      "predicted_xyz_mm": [
+        2.0426932893322345,
+        2.8592951895229533,
+        -3.7125572853269304
+      ],
+      "error_mm": 5.111873086447482,
+      "bound_parameters": [
+        "shoulder_height_mm"
+      ]
+    },
+    {
+      "point": 8,
+      "predicted_xyz_mm": [
+        0.38081135547508893,
+        33.24820443234486,
+        -4.055305219516647
+      ],
+      "error_mm": 5.209736053410245,
+      "bound_parameters": [
+        "shoulder_height_mm"
+      ]
+    },
+    {
+      "point": 9,
+      "predicted_xyz_mm": [
+        25.9743408838863,
+        23.515021442906914,
+        13.126737151627765
+      ],
+      "error_mm": 15.184600964563774,
+      "bound_parameters": [
+        "shoulder_height_mm"
+      ]
+    },
+    {
+      "point": 15,
+      "predicted_xyz_mm": [
+        2.4377332364727664,
+        63.8269498203598,
+        0.017219203843708897
+      ],
+      "error_mm": 4.537442535254514,
+      "bound_parameters": [
+        "shoulder_height_mm"
+      ]
+    },
+    {
+      "point": 16,
+      "predicted_xyz_mm": [
+        27.284913192222234,
+        52.995182816185356,
+        -1.8760506092045546
+      ],
+      "error_mm": 7.743302011463234,
+      "bound_parameters": [
+        "shoulder_height_mm"
+      ]
+    },
+    {
+      "point": 22,
+      "predicted_xyz_mm": [
+        4.508869523101708,
+        92.70485761314664,
+        2.677539911153062
+      ],
+      "error_mm": 5.900455834897023,
+      "bound_parameters": [
+        "shoulder_height_mm"
+      ]
+    },
+    {
+      "point": 23,
+      "predicted_xyz_mm": [
+        32.24887921887441,
+        94.97066335279028,
+        -1.7394190975347286
+      ],
+      "error_mm": 5.72630166029751,
+      "bound_parameters": [
+        "shoulder_height_mm"
+      ]
+    },
+    {
+      "point": 29,
+      "predicted_xyz_mm": [
+        0.13313124289869904,
+        119.47355266504921,
+        6.512381034176968
+      ],
+      "error_mm": 6.534981060310765,
+      "bound_parameters": [
+        "shoulder_height_mm"
+      ]
+    },
+    {
+      "point": 30,
+      "predicted_xyz_mm": [
+        29.71593730541302,
+        119.5272811980708,
+        -1.663750210938538
+      ],
+      "error_mm": 1.7527747843209713,
+      "bound_parameters": [
+        "shoulder_height_mm"
+      ]
+    },
+    {
+      "point": 36,
+      "predicted_xyz_mm": [
+        -3.6082883983818306,
+        146.78924611837553,
+        -0.7129882903714986
+      ],
+      "error_mm": 4.8823189117949255,
+      "bound_parameters": [
+        "shoulder_height_mm"
+      ]
+    },
+    {
+      "point": 37,
+      "predicted_xyz_mm": [
+        27.18466154223303,
+        149.45761071140362,
+        -3.047519819864732
+      ],
+      "error_mm": 4.184219619550838,
+      "bound_parameters": [
+        "shoulder_height_mm"
+      ]
+    }
+  ],
+  "leave_one_out_rmse_mm": 6.869700614762957,
+  "leave_one_out_max_error_mm": 15.184600964563774,
+  "leave_one_out_note": "Exploratory prediction at recorded commands. Same model family/signs selected using all samples; not an untouched test set or measured robot positioning error.",
+  "motion_executed": false,
+  "vertical_generalization_validated": false,
+  "physical_parameters_identified": false,
+  "ready_for_automatic_grasp": false,
+  "limitations": [
+    "Narrow 0/30mm columns; one sample per point.",
+    "Z=0 is a task approximation, not measured clearance.",
+    "Servo command degrees assumed nominal; no encoder feedback.",
+    "Bounds and upper-link-up assumption are model priors, not measured dimensions.",
+    "A bound-hitting parameter means geometry/height should not be treated as identified.",
+    "Opening gripper changes reference point; not calibrated here."
+  ]
+}

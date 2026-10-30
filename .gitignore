@@ -1,12 +1,32 @@
 .tools/
 .build/
 .venv/
+.venv-ai/
+/data/*
+!/data/sponge/
+/runs/*
+!/runs/arm_calibration/
+!/runs/arm_kinematics/
+!/runs/arm_position_tests/
+!/runs/arm_reproducibility/
+!/runs/table_calibration/
+!/runs/pick_place/
+!/runs/sponge_comparison/
+!/runs/training_test/
+# 学習の再開用・比較用重みは保存せず、実機で使う最良重みだけ残す
+/runs/**/*.pt
+/runs/**/*.pth
+!/runs/sponge_comparison/yolo11n/weights/best.pt
+/runs/**/events.out.tfevents*
+models/
 __pycache__/
 *.pyc
 
 
 # メーカー配布教材・変換前写真・配布ツールはローカル保管
-ADA031-Adeept_Robotic_Arm_Kit_for_Arduino-V4.0-20251205/
+reference/adeept_arm_v4_official_tutorials/
+reference/DEIM/
+reference/DEIMv2/
 docs/images/assembly/originals/
 *.HEIC
 *.heic

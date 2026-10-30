@@ -1,0 +1,24 @@
+{
+  "dataset": "data/sponge_evaluation",
+  "output": "runs/sponge_comparison",
+  "models": [
+    "yolo11n",
+    "deim_n",
+    "yolo11s",
+    "deim_s",
+    "deimv2_s",
+    "deimv2_m"
+  ],
+  "epochs": 20,
+  "image_size": 320,
+  "batch_size": 2,
+  "threads": 4,
+  "seed": 42,
+  "confidence_threshold": 0.25,
+  "iou_threshold": 0.5,
+  "validation_session": "20261028_073737_b805",
+  "test_sessions": [
+    "20261028_075220_c639",
+    "20261028_063549_09d5"
+  ]
+}

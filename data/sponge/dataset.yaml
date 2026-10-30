@@ -1,0 +1,7 @@
+path: "/home/u/Desktop/20261023_robot_study/data/sponge"
+train: images/train
+val: images/val
+test: images/test
+names:
+  0: sponge
+  1: target

@@ -1,0 +1,47 @@
+{
+  "python": "3.12.14",
+  "deim_commit": "09d35d53d39ee3145a1e61e3a989b28b9468d1dd",
+  "pretrained_sha256": {
+    "deim_dfine_s_coco.pth": "a089c9eb798f8a0322e05f757fe8e8188eee34aa578788a35ec253bcec8a6b38",
+    "yolo11n.pt": "0ebbc80d4a7680d14987a577cd21342b65ecfd94632bd9a8da63ae6417644ee1",
+    "yolo11s.pt": "85a76fe86dd8afe384648546b56a7a78580c7cb7b404fc595f97969322d502d5",
+    "deim_dfine_n_coco.pth": "8536a97a57bad2951cb4679e8578be225e4a19db678ab568a44e538f4f0fc917"
+  },
+  "config": {
+    "dataset": "data/sponge_evaluation",
+    "output": "runs/sponge_comparison",
+    "models": [
+      "yolo11n",
+      "deim_n",
+      "yolo11s",
+      "deim_s"
+    ],
+    "epochs": 20,
+    "image_size": 320,
+    "batch_size": 2,
+    "threads": 4,
+    "seed": 42,
+    "confidence_threshold": 0.25,
+    "iou_threshold": 0.5,
+    "validation_session": "20261028_073737_b805",
+    "test_sessions": [
+      "20261028_075220_c639",
+      "20261028_063549_09d5"
+    ]
+  },
+  "source_sha256": {
+    "vision/train_deim_test.py": "691778a2da5e9c629ae3210a14cba11f3a55a7cd16e089de23f93c1e2d460353",
+    "vision/prepare_training_test.py": "52060ef782ec4b0c4464733f8e5dff8d31b2ca12ce440e77c5b8d588dcefceb9",
+    "vision/train_detector.py": "5092661a12435ac2fe94239478f7acd512d4e8f0914bcd21ece9413649d496a0",
+    "vision/collect_sponge.py": "434380d01cc8f97eacdeb5fc04aee2d0cbae9a40314a38f55efb3702f9470329",
+    "vision/run_experiments.py": "c979d47438455ad778eb8d36741b55c67019a4b0759fbdc696024ccb8593e551",
+    "vision/evaluate_detectors.py": "d8692e6d31a912852afdbbdf3a9169a519feaa65f42816d879fa24c5960fafa1",
+    "vision/train_yolo_test.py": "fe86b0b58779d14aaa8820e0a27e81e5ab8ed5c109aefca5c231f4529810214f",
+    "vision/summarize_experiments.py": "7cebd1d8c7f2b7e800ce79aa9864efbc01d9168b789648bdd762422d47bb9018",
+    "configs/vision_experiment.json": "e43e38147af10875cc6712da28d18c7de6544d430750fcc5e91aa71fe9c56f8b"
+  },
+  "notes": [
+    "Final comparisons use four PyTorch CPU threads, including Ultralytics select_device override.",
+    "Initial YOLO eight-thread diagnostic and initial DEIM configuration parse failure preserved separately, excluded from final results."
+  ]
+}

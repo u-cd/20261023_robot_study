@@ -1,0 +1,132 @@
+{
+  "recorded_at": "2026-10-30T15:05:14.263580+00:00",
+  "preview": {
+    "target_xyz_mm": [
+      15.0,
+      135.0,
+      0.0
+    ],
+    "command_degrees_float": [
+      93.02701446658394,
+      144.08516898090497,
+      63.281356073686105
+    ],
+    "command_degrees_rounded": [
+      93,
+      144,
+      63
+    ],
+    "model_predicted_xyz_after_rounding_mm": [
+      14.737941854705909,
+      134.89048162447898,
+      -0.10543920809110574
+    ],
+    "model_rounding_error_mm": 0.3029623288374672,
+    "motion_executed": false,
+    "physical_reach_and_path_verified": false,
+    "height_generalization_verified": false,
+    "all_commands_deg": [
+      93,
+      144,
+      63,
+      80,
+      150
+    ],
+    "model_sha256": "960f8fec383842bc5b5bcef8b7032abfd184bdee86cb4797f585fd5806e9fe67"
+  },
+  "commanded_angles_deg": [
+    93,
+    144,
+    63,
+    80,
+    150
+  ],
+  "frame_captured_at": "2026-10-30T15:05:14.166353+00:00",
+  "frame_sequence": 1561,
+  "status_before": {
+    "connected": true,
+    "joints": [
+      {
+        "joint": 1,
+        "active": true,
+        "angle": 93,
+        "target": 93,
+        "speed": 25
+      },
+      {
+        "joint": 2,
+        "active": true,
+        "angle": 144,
+        "target": 144,
+        "speed": 25
+      },
+      {
+        "joint": 3,
+        "active": true,
+        "angle": 63,
+        "target": 63,
+        "speed": 25
+      },
+      {
+        "joint": 4,
+        "active": true,
+        "angle": 80,
+        "target": 80,
+        "speed": 25
+      },
+      {
+        "joint": 5,
+        "active": true,
+        "angle": 150,
+        "target": 150,
+        "speed": 25
+      }
+    ],
+    "message": ""
+  },
+  "status_after": {
+    "connected": true,
+    "joints": [
+      {
+        "joint": 1,
+        "active": true,
+        "angle": 93,
+        "target": 93,
+        "speed": 25
+      },
+      {
+        "joint": 2,
+        "active": true,
+        "angle": 144,
+        "target": 144,
+        "speed": 25
+      },
+      {
+        "joint": 3,
+        "active": true,
+        "angle": 63,
+        "target": 63,
+        "speed": 25
+      },
+      {
+        "joint": 4,
+        "active": true,
+        "angle": 80,
+        "target": 80,
+        "speed": 25
+      },
+      {
+        "joint": 5,
+        "active": true,
+        "angle": 150,
+        "target": 150,
+        "speed": 25
+      }
+    ],
+    "message": ""
+  },
+  "note": "",
+  "actual_tip_position_mm": null,
+  "actual_error_mm": null,
+  "description": "候補指令と撮影時状態の記録。実測位置・実測誤差ではない。"
+}

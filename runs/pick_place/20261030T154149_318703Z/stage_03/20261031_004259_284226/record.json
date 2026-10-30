@@ -1,0 +1,133 @@
+{
+  "recorded_at": "2026-10-30T15:42:59.284861+00:00",
+  "preview": {
+    "name": "グリッパーを開く",
+    "target_xyz_mm": [
+      10.0,
+      42.0,
+      40.0
+    ],
+    "all_commands_deg": [
+      49,
+      135,
+      80,
+      80,
+      60
+    ],
+    "waypoints": [
+      {
+        "xyz_mm": [
+          10.0,
+          42.0,
+          40.0
+        ],
+        "all_commands_deg": [
+          49,
+          135,
+          80,
+          80,
+          60
+        ]
+      }
+    ],
+    "height_verified": false,
+    "model_sha256": "960f8fec383842bc5b5bcef8b7032abfd184bdee86cb4797f585fd5806e9fe67",
+    "plan_id": "20261030T154149_318703Z",
+    "stage_index": 2
+  },
+  "commanded_angles_deg": [
+    49,
+    135,
+    80,
+    80,
+    60
+  ],
+  "frame_captured_at": "2026-10-30T15:42:59.213323+00:00",
+  "frame_sequence": 26790,
+  "status_before": {
+    "connected": true,
+    "joints": [
+      {
+        "joint": 1,
+        "active": true,
+        "angle": 49,
+        "target": 49,
+        "speed": 25
+      },
+      {
+        "joint": 2,
+        "active": true,
+        "angle": 135,
+        "target": 135,
+        "speed": 25
+      },
+      {
+        "joint": 3,
+        "active": true,
+        "angle": 80,
+        "target": 80,
+        "speed": 25
+      },
+      {
+        "joint": 4,
+        "active": true,
+        "angle": 80,
+        "target": 80,
+        "speed": 25
+      },
+      {
+        "joint": 5,
+        "active": true,
+        "angle": 60,
+        "target": 60,
+        "speed": 25
+      }
+    ],
+    "message": ""
+  },
+  "status_after": {
+    "connected": true,
+    "joints": [
+      {
+        "joint": 1,
+        "active": true,
+        "angle": 49,
+        "target": 49,
+        "speed": 25
+      },
+      {
+        "joint": 2,
+        "active": true,
+        "angle": 135,
+        "target": 135,
+        "speed": 25
+      },
+      {
+        "joint": 3,
+        "active": true,
+        "angle": 80,
+        "target": 80,
+        "speed": 25
+      },
+      {
+        "joint": 4,
+        "active": true,
+        "angle": 80,
+        "target": 80,
+        "speed": 25
+      },
+      {
+        "joint": 5,
+        "active": true,
+        "angle": 60,
+        "target": 60,
+        "speed": 25
+      }
+    ],
+    "message": ""
+  },
+  "note": "",
+  "actual_tip_position_mm": null,
+  "actual_error_mm": null,
+  "description": "候補指令と撮影時状態の記録。実測位置・実測誤差ではない。"
+}

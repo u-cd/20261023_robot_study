@@ -1,0 +1,125 @@
+{
+  "sample_id": "224347_7d9c82c2",
+  "recorded_at": "2026-10-30T13:43:47.623526+00:00",
+  "point_number": 1,
+  "reference_xyz_mm": [
+    0.0,
+    0.0,
+    null
+  ],
+  "reference_frame": "calibration_rectangle",
+  "tip": "center of closed gripper tip",
+  "joint_command_degrees": [
+    34,
+    168,
+    109,
+    80,
+    150
+  ],
+  "joint_status_before": [
+    {
+      "joint": 1,
+      "active": true,
+      "angle": 34,
+      "target": 34,
+      "speed": 25
+    },
+    {
+      "joint": 2,
+      "active": true,
+      "angle": 168,
+      "target": 168,
+      "speed": 25
+    },
+    {
+      "joint": 3,
+      "active": true,
+      "angle": 109,
+      "target": 109,
+      "speed": 25
+    },
+    {
+      "joint": 4,
+      "active": true,
+      "angle": 80,
+      "target": 80,
+      "speed": 25
+    },
+    {
+      "joint": 5,
+      "active": true,
+      "angle": 150,
+      "target": 150,
+      "speed": 25
+    }
+  ],
+  "joint_status_after": [
+    {
+      "joint": 1,
+      "active": true,
+      "angle": 34,
+      "target": 34,
+      "speed": 25
+    },
+    {
+      "joint": 2,
+      "active": true,
+      "angle": 168,
+      "target": 168,
+      "speed": 25
+    },
+    {
+      "joint": 3,
+      "active": true,
+      "angle": 109,
+      "target": 109,
+      "speed": 25
+    },
+    {
+      "joint": 4,
+      "active": true,
+      "angle": 80,
+      "target": 80,
+      "speed": 25
+    },
+    {
+      "joint": 5,
+      "active": true,
+      "angle": 150,
+      "target": 150,
+      "speed": 25
+    }
+  ],
+  "joint_angles_measured": false,
+  "contact_and_stillness_confirmed_by_user": false,
+  "approach": "unspecified",
+  "note": "すこし浮かしてる",
+  "repeat_for_point": 1,
+  "calibration_sha256": "4e20422c8fed118fbeec8af4b6ceffc7b01db64f218234529ce40c4c39ae1a05",
+  "capture": {
+    "captured_at": "2026-10-30T13:43:47.444653+00:00",
+    "camera": "/dev/v4l/by-id/usb-EMEET_EMEET_SmartCam_C960_A251209000118420-video-index0",
+    "image_size": [
+      640,
+      480
+    ],
+    "reference_target_px": [
+      222.91942649985708,
+      364.7363229176665
+    ],
+    "transport": "shared_live_camera",
+    "sequence": 8730
+  },
+  "raw_image": "raw.png",
+  "marked_image": "marked.png",
+  "note_on_position": "Reference grid location manually aligned by user; actual tip position not automatically measured.",
+  "reference_xy_mm": [
+    0.0,
+    0.0
+  ],
+  "height_condition": "hover_unmeasured",
+  "paper_contact": false,
+  "hover_and_stillness_confirmed_by_user": true,
+  "height_condition_source": "User clarified: tip is just above paper, without contact; clearance not measured.",
+  "height_note": "Z is unknown, not zero; equal height across samples has not been measured or verified."
+}

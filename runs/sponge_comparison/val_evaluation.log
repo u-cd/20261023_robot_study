@@ -1,0 +1,8 @@
+Evaluating yolo11n
+{"yolo11n": {"map50_95": 0.8213584929921562, "map50": 1.0, "latency_mean_ms": 39.12752469316021, "both_found_images": 12}}
+Evaluating deim_n
+{"deim_n": {"map50_95": 0.8294371168437387, "map50": 0.9965727341964966, "latency_mean_ms": 73.51873910778926, "both_found_images": 12}}
+Evaluating yolo11s
+{"yolo11s": {"map50_95": 0.8373792379237924, "map50": 1.0, "latency_mean_ms": 84.27842365927063, "both_found_images": 12}}
+Evaluating deim_s
+{"deim_s": {"map50_95": 0.8610430994489466, "map50": 1.0, "latency_mean_ms": 173.27636292450026, "both_found_images": 12}}

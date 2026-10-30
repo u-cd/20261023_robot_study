@@ -16,6 +16,7 @@ button{background:#f3f6fa;cursor:pointer}button:disabled{opacity:.42;cursor:defa
 .joint.active{border-color:#66a4c7}.joint.moving{box-shadow:0 0 0 3px #b6d9ed}
 .badge{font-size:12px;letter-spacing:.08em;color:#52677d}.state{font-size:13px;color:#52677d;min-height:21px}.state.on{color:#166449}
 .jog{font-size:30px;height:60px;width:100%;touch-action:none;user-select:none;-webkit-user-select:none;background:#f0f6fb;color:#17649a;border-color:#c4d9e7}
+.fine-controls{display:flex;gap:8px}.fine-controls button{flex:1;font-size:18px;font-weight:700;padding:9px 4px;touch-action:manipulation}
 .jog:active{background:#c6dfef}.angle{font-size:42px;line-height:1.3;font-weight:700;font-variant-numeric:tabular-nums}.angle small{font-size:20px;color:#52677d}
 .target{font-size:13px;color:#52677d;min-height:21px}.settings{border-top:1px solid #e5ebf0;margin-top:6px;padding-top:12px;display:grid;gap:8px;text-align:left}
 .settings label{font-size:13px;color:#52677d}.settings input,.settings select,.settings button{width:100%;min-width:0;padding:7px 9px;font-size:14px}
@@ -24,13 +25,23 @@ button{background:#f3f6fa;cursor:pointer}button:disabled{opacity:.42;cursor:defa
 </style>
 <main>
 <h1>ロボットアーム 手動操作</h1>
-<p class="muted">▲で角度を増やす、▼で減らす。クリックで1度、長押しで連続操作。角度・速度は指令値です。</p>
+<p class="muted">▲で角度を増やす、▼で減らす。微調整は「−1°」「＋1°」で1クリック1度、矢印は長押しで連続操作。角度・速度は指令値です。</p>
 <section>
 <div class="row"><input id="port" aria-label="USBポート" value="/dev/ttyUSB0"><button id="connect" class="primary">接続</button><button id="disconnect" disabled>切断</button><button id="refresh" disabled>全関節の状態を更新</button><button id="stop" class="stop" disabled>全関節 停止・保持</button></div>
 <p class="muted" style="margin-bottom:0">接続時に基板がリセットされ、全関節の保持が解除されます。先にアームを支持してください。</p>
 </section>
 <div class="grid-wrap"><div class="joints" id="joints"></div></div>
 <p class="muted">長押しは0.3秒後に開始。矢印を離す・領域から出る・画面のフォーカスが外れると移動指令を停止します。同時に動かすのは1関節です。</p>
+<section id="calibration-section" hidden>
+<h2>紙上の点と関節指令を記録</h2>
+<p>基準点：閉じたグリッパー先端の中心。紙はそのまま固定し、届く交点の直上へ、紙に触れないぎりぎりの位置で合わせます。高さは未測定です。</p>
+<div class="row"><label for="calibration-point">紙の点番号</label><select id="calibration-point"></select>
+<label for="calibration-approach">接近方向</label><select id="calibration-approach"><option value="unspecified">未分類</option><option value="same_direction">同じ方向から</option><option value="opposite_direction">逆方向から</option></select></div>
+<p><label><input type="checkbox" id="calibration-confirm">グリップが閉じ、先端中心が選んだ交点の直上で紙に触れず、静止しています</label></p>
+<div class="row"><input id="calibration-note" maxlength="200" placeholder="メモ（任意）" aria-label="記録メモ"><button id="calibration-save" class="primary" disabled>この点の指令値と写真を記録</button></div>
+<p class="muted">記録では移動指令を送りません。角度は実測値ではなく指令値です。十字は紙上の目標点で、先端を自動検出した結果ではありません。</p>
+<p id="calibration-result" role="status"></p><img id="calibration-image" hidden style="max-width:100%;height:auto" alt="保存した先端と紙上の目標点の確認画像">
+</section>
 <section>
 <div id="message" role="status" aria-live="polite">接続後、操作したい関節の列で有効化してください。</div>
 <p class="note muted">最初の有効化は開始角度へ急に動く場合があります。保持解除で肩・肘が落下する場合があります。確認済みの角度を使い、必要な支持を行ってください。</p>
@@ -41,6 +52,7 @@ button{background:#f3f6fa;cursor:pointer}button:disabled{opacity:.42;cursor:defa
 const $=id=>document.getElementById(id);
 const definitions=[['台座','D9'],['肩','D6'],['肘','D5'],['手首','D3'],['グリッパー','D11']];
 const defaultAngles=[90,0,0,80,90];
+const calibrationPoints=__CALIBRATION_POINTS__;
 let connected=false,joints=[],held=false,heldJoint=null,epoch=0,timer=null,busy=false,chain=Promise.resolve();
 for(let joint=1;joint<=5;joint++){
   const [name,pin]=definitions[joint-1],grip=joint===5;
@@ -51,6 +63,7 @@ for(let joint=1;joint<=5;joint++){
     <button class="jog" id="plus-${joint}" disabled aria-label="関節${joint} ${name}の角度を増やす">▲</button>
     <div><div class="angle" id="angle-${joint}">—<small>°</small></div><div class="target" id="target-${joint}">現在角度は不明</div></div>
     <button class="jog" id="minus-${joint}" disabled aria-label="関節${joint} ${name}の角度を減らす">▼</button>
+    <div class="fine-controls"><button id="fine-minus-${joint}" disabled aria-label="関節${joint} ${name}を1度減らす">−1°</button><button id="fine-plus-${joint}" disabled aria-label="関節${joint} ${name}を1度増やす">＋1°</button></div>
     <div class="range">指令範囲 ${grip?'50〜150':'0〜180'}°</div>
     <div class="settings">
       <div class="field"><label for="initial-${joint}">開始角度</label><input id="initial-${joint}" aria-label="関節${joint}の開始角度" type="number" value="${defaultAngles[joint-1]}" min="${grip?50:0}" max="${grip?150:180}"></div>
@@ -65,6 +78,7 @@ for(let joint=1;joint<=5;joint++){
 function render(){
   $('connect').disabled=connected||busy;$('disconnect').disabled=!connected||busy||held;
   for(const id of ['refresh','stop'])$(id).disabled=!connected||busy;
+  $('calibration-save').disabled=!connected||busy||held||joints.length!==5||!joints.every(j=>j.active&&j.angle===j.target);
   for(let joint=1;joint<=5;joint++){
     const item=joints.find(x=>x.joint===joint),active=connected&&item?.active,locked=busy||held;
     $('card-'+joint).classList.toggle('active',!!active);$('card-'+joint).classList.toggle('moving',held&&heldJoint===joint);
@@ -75,7 +89,10 @@ function render(){
     $('start-'+joint).disabled=!connected||active||locked;$('off-'+joint).disabled=!active||locked;
     $('initial-'+joint).disabled=!!active||locked;$('speed-'+joint).disabled=locked;
     $('applySpeed-'+joint).disabled=!connected||locked;
-    for(const direction of ['minus','plus'])$(direction+'-'+joint).disabled=!active||busy||(held&&heldJoint!==joint);
+    for(const direction of ['minus','plus']){
+      $(direction+'-'+joint).disabled=!active||busy||(held&&heldJoint!==joint);
+      $('fine-'+direction+'-'+joint).disabled=!active||locked;
+    }
   }
 }
 function show(text,error=false){$('message').textContent=text;$('message').className=error?'error':'';}
@@ -115,6 +132,14 @@ for(let joint=1;joint<=5;joint++){
     button.addEventListener('click',event=>{if(event.detail===0)enqueue({action:'step',joint,direction});});
     button.addEventListener('contextmenu',event=>event.preventDefault());
   }
+  for(const [name,direction] of [['minus','-'],['plus','+']]){
+    const button=$('fine-'+name+'-'+joint);
+    button.onkeydown=event=>{if(event.repeat)event.preventDefault();};
+    button.onclick=async()=>{
+      busy=true;render();$('calibration-confirm').checked=false;
+      try{await enqueue({action:'fine_step',joint,direction});}catch{}finally{busy=false;render();}
+    };
+  }
   $('start-'+joint).onclick=()=>{const value=$('initial-'+joint).value;if(!/^\d+$/.test(value)){show('開始角度を整数で入力してください。',true);return;}enqueue({action:'start',joint,angle:Number(value)});};
   $('off-'+joint).onclick=()=>{cancelHold();enqueue({action:'off',joint});};
   $('applySpeed-'+joint).onclick=()=>{cancelHold();enqueue({action:'speed',joint,speed:Number($('speed-'+joint).value)});};
@@ -125,6 +150,27 @@ $('connect').onclick=async()=>{busy=true;render();show('接続中。基板の起
 $('disconnect').onclick=()=>{cancelHold();enqueue({action:'disconnect'});};
 $('refresh').onclick=()=>enqueue({action:'status'});
 $('stop').onclick=()=>{cancelHold(false);enqueue({action:'stop'});};
+if(calibrationPoints.length){
+  $('calibration-section').hidden=false;
+  for(const point of calibrationPoints){
+    const option=document.createElement('option');option.value=String(point.number);
+    option.textContent=`${point.number}番 (${point.xy[0]}, ${point.xy[1]}) mm`;
+    $('calibration-point').appendChild(option);
+  }
+  $('calibration-point').onchange=()=>{$('calibration-confirm').checked=false;};
+  $('calibration-save').onclick=async()=>{
+    if(!$('calibration-confirm').checked){show('先端の位置・閉じたグリップ・静止を確認してください。',true);return;}
+    busy=true;render();show('指令値と写真を記録中です…');
+    try{
+      const result=await enqueue({action:'record_calibration',point:Number($('calibration-point').value),confirmed:true,
+        approach:$('calibration-approach').value,note:$('calibration-note').value});
+      const sample=result.calibration_sample;
+      $('calibration-result').textContent=`保存済み ${sample.count}件：点${sample.point}・${sample.repeat}回目 / 指令 ${sample.angles.join(', ')}° / ${sample.path}`;
+      $('calibration-image').src='/calibration-image/'+sample.id;$('calibration-image').hidden=false;
+      $('calibration-confirm').checked=false;
+    }catch{}finally{busy=false;render();}
+  };
+}
 render();
 </script>
 </html>

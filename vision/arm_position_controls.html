@@ -1,0 +1,58 @@
+<section id="position-test">
+<h2>紙面座標から角度を試す</h2>
+<p>高さ0・手首80°・閉じたグリッパー150°。11点の内側で計算します。</p>
+<div class="row"><label>X [mm] <input id="position-x" type="number" required value="15" step="1" style="width:85px"></label>
+<label>Y [mm] <input id="position-y" type="number" required value="135" step="1" style="width:85px"></label>
+<button id="position-calculate">角度候補を計算（動きません）</button></div>
+<p id="position-result" role="status">最初の候補：X=15、Y=135mm。計算後、各関節を1°ずつ近づけます。</p>
+<div class="row" id="position-steps"></div>
+<p class="muted">各ボタンは1クリックで1関節だけ1°動かします。机・物体・ケーブルとの接触を実機で確認しながら進めてください。橙の十字は目標位置で、先端の検出結果ではありません。</p>
+<p><label><input type="checkbox" id="position-confirm">候補角度に達し、実機が静止していることを確認しました</label></p>
+<div class="row"><input id="position-note" maxlength="200" placeholder="ずれの方向などのメモ（任意）"><button id="position-save" disabled>状態と写真を保存</button></div>
+</section>
+<script>
+let positionCandidate=null,positionBusy=false;
+const posResult=document.getElementById('position-result');
+function invalidatePosition(){positionCandidate=null;document.getElementById('position-steps').replaceChildren();document.getElementById('position-save').disabled=true;document.getElementById('position-confirm').checked=false;}
+for(const id of ['position-x','position-y'])document.getElementById(id).oninput=()=>{invalidatePosition();posResult.textContent='座標を変更しました。再計算してください。';};
+async function positionFetch(action,data){
+ const response=await fetch('/position-test/'+action,{method:'POST',headers:{'Content-Type':'application/json','X-Arm-Token':'__TOKEN__'},body:JSON.stringify(data)});
+ const result=await response.json();if(!response.ok)throw Error(result.error);return result;
+}
+document.getElementById('position-calculate').onclick=async()=>{
+ if(positionBusy||busy||held)return;invalidatePosition();
+ for(const id of ['position-x','position-y'])if(!document.getElementById(id).reportValidity())return;
+ positionBusy=true;busy=true;render();
+ for(const id of ['position-x','position-y','position-calculate'])document.getElementById(id).disabled=true;
+ try{
+  positionCandidate=await positionFetch('preview',{x:Number(document.getElementById('position-x').value),y:Number(document.getElementById('position-y').value)});
+  posResult.textContent='候補（台座・肩・肘・手首・グリッパー）：'+positionCandidate.all_commands_deg.join(', ')+'°。まだ移動していません。';
+  ['台座','肩','肘'].forEach((name,index)=>{
+   const button=document.createElement('button');button.textContent=name+'を候補へ1°近づける';
+   button.onclick=async()=>{
+    if(positionBusy||busy||held||!positionCandidate)return;
+    positionBusy=true;busy=true;render();document.getElementById('position-confirm').checked=false;
+    try{
+     await enqueue({action:'status'});
+     if(joints.length!==5||!joints.every(j=>j.active&&j.angle===j.target))throw Error('全関節を保持・静止させてください。');
+     for(const [joint,angle] of [[4,80],[5,150]])if(joints.find(j=>j.joint===joint).angle!==angle)throw Error('先に手首80°・グリッパー150°に合わせてください。');
+     const current=joints.find(j=>j.joint===index+1).angle,target=positionCandidate.all_commands_deg[index];
+     if(current===target){posResult.textContent=name+'は候補の'+target+'°です。';return;}
+     await enqueue({action:'fine_step',joint:index+1,direction:target>current?'+':'-'});
+     posResult.textContent=name+'を1°変更。候補：'+positionCandidate.all_commands_deg.join(', ')+'°';
+    }catch(error){posResult.textContent=error.message;}finally{positionBusy=false;busy=false;render();}
+   };document.getElementById('position-steps').append(button);
+  });document.getElementById('position-save').disabled=false;
+ }catch(error){posResult.textContent=error.message;}finally{
+  positionBusy=false;busy=false;render();
+  for(const id of ['position-x','position-y','position-calculate'])document.getElementById(id).disabled=false;
+ }
+};
+document.getElementById('position-save').onclick=async()=>{
+ if(!positionCandidate||positionBusy||busy||held)return;
+ if(!document.getElementById('position-confirm').checked){posResult.textContent='候補到達と静止の確認にチェックしてください。';return;}
+ positionBusy=true;busy=true;render();
+ try{const result=await positionFetch('record',{x:positionCandidate.target_xyz_mm[0],y:positionCandidate.target_xyz_mm[1],confirmed:true,note:document.getElementById('position-note').value});posResult.textContent='保存しました：'+result.path;}
+ catch(error){posResult.textContent=error.message;}finally{positionBusy=false;busy=false;render();}
+};
+</script>

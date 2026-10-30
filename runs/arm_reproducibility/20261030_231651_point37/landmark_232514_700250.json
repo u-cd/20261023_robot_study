@@ -1,0 +1,38 @@
+{
+  "measured_at": "2026-10-30T14:25:14.673455+00:00",
+  "measurement_type": "manual_image_landmarks",
+  "baseline_tip_pixel": [
+    278.5,
+    181.0
+  ],
+  "returned_tip_pixel": [
+    279.25,
+    184.5
+  ],
+  "delta_pixel": [
+    0.75,
+    3.5
+  ],
+  "displacement_pixel": 3.5794552658190883,
+  "paper_plane_projection_mm": [
+    [
+      32.41092291356345,
+      148.41878823977103
+    ],
+    [
+      32.91847564776672,
+      144.51552238770242
+    ]
+  ],
+  "apparent_delta_mm": [
+    0.5075527342032728,
+    -3.903265852068614
+  ],
+  "apparent_displacement_mm": 3.9361267878362534,
+  "actual_3d_position_error_mm": null,
+  "height_condition": "hover_unmeasured",
+  "baseline_image_sha256": "6997215dd328e4d1cb6826088513d01ddfb5c0602ca195ddc5f4a77da8ee1867",
+  "returned_image_sha256": "b74be6f9134c937a0149a1003291df672aaa28810e8a670a90dc6b9c8792d0b9",
+  "limitations": "Manual landmark selection uncertainty not estimated. Paper-plane projection only; actual tip height / change in height unknown. Not a measured 3D error.",
+  "comparison_image": "landmark_232514_700250.png"
+}

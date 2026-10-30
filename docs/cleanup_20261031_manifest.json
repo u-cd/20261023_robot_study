@@ -1,0 +1,265 @@
+{
+  "deleted": [
+    {
+      "path": ".build",
+      "bytes": 1974286
+    },
+    {
+      "path": "models",
+      "bytes": 195757854
+    },
+    {
+      "path": "memo.txt",
+      "bytes": 16
+    },
+    {
+      "path": "vision/__pycache__",
+      "bytes": 289089
+    },
+    {
+      "path": "data/sponge_training_test",
+      "bytes": 7681661
+    },
+    {
+      "path": "tests/__pycache__",
+      "bytes": 81430
+    },
+    {
+      "path": "control/__pycache__",
+      "bytes": 70611
+    },
+    {
+      "path": "data/sponge_evaluation",
+      "bytes": 7678803
+    },
+    {
+      "path": "runs/arm_kinematics/preview_15_75_0.json",
+      "bytes": 505
+    },
+    {
+      "path": "runs/pick_place/example_preview.json",
+      "bytes": 13835
+    },
+    {
+      "path": "runs/sponge_comparison/deimv2_s/val_images",
+      "bytes": 1567207
+    },
+    {
+      "path": "runs/training_test/deim_n/checkpoint0000.pth",
+      "bytes": 45469374
+    },
+    {
+      "path": "runs/sponge_comparison/yolo11s/test_images",
+      "bytes": 1565814
+    },
+    {
+      "path": "runs/sponge_comparison/deim_s/checkpoint0019.pth",
+      "bytes": 123516998
+    },
+    {
+      "path": "runs/sponge_comparison/deim_n/checkpoint0019.pth",
+      "bytes": 45469246
+    },
+    {
+      "path": "runs/sponge_comparison/yolo11s/val_images",
+      "bytes": 1567594
+    },
+    {
+      "path": "runs/sponge_comparison/deim_n/test_images",
+      "bytes": 1568182
+    },
+    {
+      "path": "runs/sponge_comparison/yolo11n/test_images",
+      "bytes": 1564952
+    },
+    {
+      "path": "runs/sponge_comparison/deim_n/last.pth",
+      "bytes": 45390574
+    },
+    {
+      "path": "runs/sponge_comparison/deimv2_m/best_stg1.pth",
+      "bytes": 219690366
+    },
+    {
+      "path": "runs/sponge_comparison/deim_s/val_images",
+      "bytes": 1568340
+    },
+    {
+      "path": "runs/sponge_comparison/deim_s/test_images",
+      "bytes": 1565996
+    },
+    {
+      "path": "runs/sponge_comparison/deim_s/best_stg1.pth",
+      "bytes": 123505698
+    },
+    {
+      "path": "runs/sponge_comparison/deimv2_m/test_images",
+      "bytes": 1564451
+    },
+    {
+      "path": "runs/sponge_comparison/deim_n/best_stg1.pth",
+      "bytes": 45459446
+    },
+    {
+      "path": "runs/sponge_comparison/deimv2_m/last.pth",
+      "bytes": 219608974
+    },
+    {
+      "path": "runs/sponge_comparison/deimv2_s/best_stg1.pth",
+      "bytes": 117006350
+    },
+    {
+      "path": "runs/sponge_comparison/deimv2_m/checkpoint0019.pth",
+      "bytes": 219702126
+    },
+    {
+      "path": "runs/sponge_comparison/deimv2_s/checkpoint0019.pth",
+      "bytes": 117016910
+    },
+    {
+      "path": "runs/sponge_comparison/yolo11n/val_images",
+      "bytes": 1566801
+    },
+    {
+      "path": "runs/sponge_comparison/deimv2_s/test_images",
+      "bytes": 1565072
+    },
+    {
+      "path": "runs/training_test/deim_n/last.pth",
+      "bytes": 45390702
+    },
+    {
+      "path": "runs/sponge_comparison/deimv2_m/val_images",
+      "bytes": 1568711
+    },
+    {
+      "path": "runs/training_test/deim_n/best_stg1.pth",
+      "bytes": 45459574
+    },
+    {
+      "path": "runs/sponge_comparison/deim_s/last.pth",
+      "bytes": 123402302
+    },
+    {
+      "path": "runs/sponge_comparison/deim_n/val_images",
+      "bytes": 1567517
+    },
+    {
+      "path": "runs/sponge_comparison/deimv2_s/last.pth",
+      "bytes": 116898766
+    },
+    {
+      "path": "runs/sponge_comparison/deim_s/summary/events.out.tfevents.1793147572.u-MB-J370.762.0",
+      "bytes": 101827
+    },
+    {
+      "path": "runs/table_calibration/grid_20261030_212021_278376/draft/raw.png",
+      "bytes": 436314
+    },
+    {
+      "path": "runs/sponge_comparison/deimv2_s/eval/000.pth",
+      "bytes": 468176
+    },
+    {
+      "path": "runs/sponge_comparison/deim_s/eval/latest.pth",
+      "bytes": 496348
+    },
+    {
+      "path": "runs/training_test/deim_n/eval/latest.pth",
+      "bytes": 505372
+    },
+    {
+      "path": "runs/sponge_comparison/deimv2_s/summary/events.out.tfevents.1793148897.u-MB-J370.4.0",
+      "bytes": 123123
+    },
+    {
+      "path": "runs/training_test/yolo11n/weights/last.pt",
+      "bytes": 5420883
+    },
+    {
+      "path": "runs/sponge_comparison/yolo11s/weights/last.pt",
+      "bytes": 19128915
+    },
+    {
+      "path": "runs/sponge_comparison/yolo11s/weights/best.pt",
+      "bytes": 19128915
+    },
+    {
+      "path": "runs/sponge_comparison/deim_n/eval/000.pth",
+      "bytes": 446480
+    },
+    {
+      "path": "runs/training_test/deim_n/summary/events.out.tfevents.1793146231.u-MB-J370.4.0",
+      "bytes": 12709
+    },
+    {
+      "path": "runs/sponge_comparison/deim_n/eval/latest.pth",
+      "bytes": 483036
+    },
+    {
+      "path": "runs/training_test/yolo11n/weights/best.pt",
+      "bytes": 5420883
+    },
+    {
+      "path": "runs/sponge_comparison/deimv2_m/eval/000.pth",
+      "bytes": 454800
+    },
+    {
+      "path": "runs/table_calibration/grid_20261030_212021_278376/draft/points.png",
+      "bytes": 1318369
+    },
+    {
+      "path": "runs/table_calibration/grid_20261030_212021_278376/draft/report.html",
+      "bytes": 6376
+    },
+    {
+      "path": "runs/sponge_comparison/yolo11n/weights/last.pt",
+      "bytes": 5423315
+    },
+    {
+      "path": "runs/sponge_comparison/deimv2_s/eval/latest.pth",
+      "bytes": 484892
+    },
+    {
+      "path": "runs/sponge_comparison/deim_n/summary/events.out.tfevents.1793147055.u-MB-J370.5.0",
+      "bytes": 101828
+    },
+    {
+      "path": "runs/sponge_comparison/deim_s/eval/000.pth",
+      "bytes": 471120
+    },
+    {
+      "path": "runs/sponge_comparison/deimv2_m/summary/events.out.tfevents.1793149498.u-MB-J370.681.0",
+      "bytes": 123123
+    },
+    {
+      "path": "runs/sponge_comparison/deimv2_m/eval/latest.pth",
+      "bytes": 489948
+    },
+    {
+      "path": "runs/training_test/deim_n/eval/000.pth",
+      "bytes": 505360
+    },
+    {
+      "path": "runs/arm_calibration/20261030_221230_241932/225040_2f2a7888/marked_before_height_correction.png",
+      "bytes": 519180
+    },
+    {
+      "path": "runs/arm_calibration/20261030_221230_241932/224347_7d9c82c2/marked_before_height_correction.png",
+      "bytes": 527734
+    },
+    {
+      "path": "runs/sponge_comparison/diagnostics/yolo11n_threads8/yolo11n/weights/last.pt",
+      "bytes": 5423315
+    },
+    {
+      "path": "runs/sponge_comparison/failed/deim_n_config/deim_n/summary/events.out.tfevents.1793147030.u-MB-J370.88.0",
+      "bytes": 5109
+    },
+    {
+      "path": "runs/sponge_comparison/diagnostics/yolo11n_threads8/yolo11n/weights/best.pt",
+      "bytes": 5423315
+    }
+  ],
+  "total_bytes": 1958786898
+}
