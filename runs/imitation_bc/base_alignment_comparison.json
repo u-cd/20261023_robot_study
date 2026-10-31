@@ -1,0 +1,451 @@
+{
+  "test_episode_ids": [
+    "20261031T014455_130953Z",
+    "20261031T013913_039608Z",
+    "20261031T013236_735561Z",
+    "20261031T020255_179804Z"
+  ],
+  "counts": {
+    "samples": 646,
+    "raw_correct": 339,
+    "guided_correct": 339,
+    "changed": 54
+  },
+  "raw_accuracy": 0.5247678018575851,
+  "guided_accuracy": 0.5247678018575851,
+  "changes": [
+    {
+      "episode": "20261031T014455_130953Z",
+      "index": 28,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 1,
+      "goal": 38.96155706421545
+    },
+    {
+      "episode": "20261031T014455_130953Z",
+      "index": 29,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 1,
+      "goal": 38.99382610123472
+    },
+    {
+      "episode": "20261031T014455_130953Z",
+      "index": 30,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 1,
+      "goal": 38.89312926569444
+    },
+    {
+      "episode": "20261031T014455_130953Z",
+      "index": 31,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 2,
+      "goal": 38.95196957377689
+    },
+    {
+      "episode": "20261031T014455_130953Z",
+      "index": 32,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 2,
+      "goal": 38.80005692616115
+    },
+    {
+      "episode": "20261031T014455_130953Z",
+      "index": 33,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 2,
+      "goal": 38.908914435529724
+    },
+    {
+      "episode": "20261031T014455_130953Z",
+      "index": 112,
+      "raw": "base+",
+      "guided": "shoulder-",
+      "truth": 0,
+      "goal": 66.71397219249991
+    },
+    {
+      "episode": "20261031T014455_130953Z",
+      "index": 113,
+      "raw": "base+",
+      "guided": "shoulder-",
+      "truth": 0,
+      "goal": 65.93171248673615
+    },
+    {
+      "episode": "20261031T014455_130953Z",
+      "index": 114,
+      "raw": "base+",
+      "guided": "shoulder-",
+      "truth": 2,
+      "goal": 65.59325547869247
+    },
+    {
+      "episode": "20261031T014455_130953Z",
+      "index": 115,
+      "raw": "base+",
+      "guided": "shoulder-",
+      "truth": 2,
+      "goal": 65.54758212377195
+    },
+    {
+      "episode": "20261031T014455_130953Z",
+      "index": 120,
+      "raw": "base+",
+      "guided": "gripper-",
+      "truth": 5,
+      "goal": 71.00149458244283
+    },
+    {
+      "episode": "20261031T014455_130953Z",
+      "index": 121,
+      "raw": "base+",
+      "guided": "gripper-",
+      "truth": 5,
+      "goal": 71.00149458244283
+    },
+    {
+      "episode": "20261031T013913_039608Z",
+      "index": 76,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 1,
+      "goal": 35.34749427331983
+    },
+    {
+      "episode": "20261031T013913_039608Z",
+      "index": 77,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 1,
+      "goal": 35.401686049595945
+    },
+    {
+      "episode": "20261031T013913_039608Z",
+      "index": 78,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 1,
+      "goal": 35.37669896001685
+    },
+    {
+      "episode": "20261031T013913_039608Z",
+      "index": 79,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 4,
+      "goal": 35.42810676202849
+    },
+    {
+      "episode": "20261031T013913_039608Z",
+      "index": 80,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 4,
+      "goal": 35.37482888240592
+    },
+    {
+      "episode": "20261031T013913_039608Z",
+      "index": 81,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 4,
+      "goal": 35.36090677031017
+    },
+    {
+      "episode": "20261031T013913_039608Z",
+      "index": 82,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 4,
+      "goal": 35.387608197987774
+    },
+    {
+      "episode": "20261031T013913_039608Z",
+      "index": 83,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 2,
+      "goal": 35.35755659495604
+    },
+    {
+      "episode": "20261031T013913_039608Z",
+      "index": 84,
+      "raw": "base-",
+      "guided": "base+",
+      "truth": 2,
+      "goal": 35.39608013533609
+    },
+    {
+      "episode": "20261031T013913_039608Z",
+      "index": 85,
+      "raw": "base-",
+      "guided": "base+",
+      "truth": 2,
+      "goal": 35.473748915641735
+    },
+    {
+      "episode": "20261031T013913_039608Z",
+      "index": 86,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 4,
+      "goal": 35.39560044948367
+    },
+    {
+      "episode": "20261031T013913_039608Z",
+      "index": 87,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 4,
+      "goal": 35.399834087541436
+    },
+    {
+      "episode": "20261031T013236_735561Z",
+      "index": 21,
+      "raw": "base+",
+      "guided": "shoulder+",
+      "truth": 3,
+      "goal": 63.49955605553262
+    },
+    {
+      "episode": "20261031T013236_735561Z",
+      "index": 22,
+      "raw": "base+",
+      "guided": "shoulder+",
+      "truth": 5,
+      "goal": 63.37974705753501
+    },
+    {
+      "episode": "20261031T013236_735561Z",
+      "index": 23,
+      "raw": "base+",
+      "guided": "shoulder+",
+      "truth": 5,
+      "goal": 63.44446886600272
+    },
+    {
+      "episode": "20261031T013236_735561Z",
+      "index": 108,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 1,
+      "goal": 26.965839312220172
+    },
+    {
+      "episode": "20261031T013236_735561Z",
+      "index": 109,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 1,
+      "goal": 27.018945466093513
+    },
+    {
+      "episode": "20261031T013236_735561Z",
+      "index": 110,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 1,
+      "goal": 27.03863625302682
+    },
+    {
+      "episode": "20261031T013236_735561Z",
+      "index": 111,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 1,
+      "goal": 26.91941785952459
+    },
+    {
+      "episode": "20261031T013236_735561Z",
+      "index": 112,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 2,
+      "goal": 26.989155722642334
+    },
+    {
+      "episode": "20261031T013236_735561Z",
+      "index": 113,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 2,
+      "goal": 26.96609754260614
+    },
+    {
+      "episode": "20261031T013236_735561Z",
+      "index": 114,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 2,
+      "goal": 27.02027376587678
+    },
+    {
+      "episode": "20261031T013236_735561Z",
+      "index": 115,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 2,
+      "goal": 27.120344536693285
+    },
+    {
+      "episode": "20261031T013236_735561Z",
+      "index": 116,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 0,
+      "goal": 27.100460361117264
+    },
+    {
+      "episode": "20261031T013236_735561Z",
+      "index": 117,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 0,
+      "goal": 27.14407136338516
+    },
+    {
+      "episode": "20261031T013236_735561Z",
+      "index": 118,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 0,
+      "goal": 27.03720670794721
+    },
+    {
+      "episode": "20261031T013236_735561Z",
+      "index": 119,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 0,
+      "goal": 27.000158147443187
+    },
+    {
+      "episode": "20261031T013236_735561Z",
+      "index": 120,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 1,
+      "goal": 26.978298153104348
+    },
+    {
+      "episode": "20261031T013236_735561Z",
+      "index": 121,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 1,
+      "goal": 26.888734657210446
+    },
+    {
+      "episode": "20261031T013236_735561Z",
+      "index": 122,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 2,
+      "goal": 26.9853351653439
+    },
+    {
+      "episode": "20261031T013236_735561Z",
+      "index": 123,
+      "raw": "base-",
+      "guided": "shoulder+",
+      "truth": 2,
+      "goal": 26.983934441201853
+    },
+    {
+      "episode": "20261031T013236_735561Z",
+      "index": 129,
+      "raw": "base+",
+      "guided": "shoulder-",
+      "truth": 4,
+      "goal": 27.043924536937055
+    },
+    {
+      "episode": "20261031T013236_735561Z",
+      "index": 135,
+      "raw": "base+",
+      "guided": "elbow-",
+      "truth": 2,
+      "goal": 27.106464626449615
+    },
+    {
+      "episode": "20261031T013236_735561Z",
+      "index": 146,
+      "raw": "base+",
+      "guided": "elbow+",
+      "truth": 4,
+      "goal": 27.1759674835898
+    },
+    {
+      "episode": "20261031T013236_735561Z",
+      "index": 147,
+      "raw": "base+",
+      "guided": "shoulder+",
+      "truth": 2,
+      "goal": 27.1759674835898
+    },
+    {
+      "episode": "20261031T020255_179804Z",
+      "index": 92,
+      "raw": "base+",
+      "guided": "shoulder+",
+      "truth": 0,
+      "goal": 94.76382250287223
+    },
+    {
+      "episode": "20261031T020255_179804Z",
+      "index": 93,
+      "raw": "base-",
+      "guided": "elbow-",
+      "truth": 0,
+      "goal": 94.63522744421773
+    },
+    {
+      "episode": "20261031T020255_179804Z",
+      "index": 94,
+      "raw": "base-",
+      "guided": "shoulder-",
+      "truth": 2,
+      "goal": 93.1873176963423
+    },
+    {
+      "episode": "20261031T020255_179804Z",
+      "index": 100,
+      "raw": "base+",
+      "guided": "shoulder+",
+      "truth": 4,
+      "goal": 92.88849154868898
+    },
+    {
+      "episode": "20261031T020255_179804Z",
+      "index": 102,
+      "raw": "base+",
+      "guided": "shoulder+",
+      "truth": 2,
+      "goal": 94.58539219772034
+    },
+    {
+      "episode": "20261031T020255_179804Z",
+      "index": 103,
+      "raw": "base+",
+      "guided": "shoulder+",
+      "truth": 2,
+      "goal": 94.50608606425027
+    },
+    {
+      "episode": "20261031T020255_179804Z",
+      "index": 104,
+      "raw": "base+",
+      "guided": "shoulder+",
+      "truth": 2,
+      "goal": 96.13479671410565
+    }
+  ],
+  "interpretation": "Teacher-state offline comparison only, not physical task success or proof of convergence."
+}

@@ -26,6 +26,12 @@ from control.arm_calibration import apply_hover_condition
 from vision.arm_position_test import position_preview, save_position_test
 from vision.arm_position_test import stationary_commands
 from control.pick_place_plan import build_transfer
+from control.imitation_record import DemonstrationRecorder
+from vision.live_detector import LiveDetector
+from control.imitation_policy import ImitationPolicy
+from control.imitation_trial import PolicyTrial
+from control.base_alignment import BaseAlignment
+from control.motion_order import MotionOrder
 
 
 class LiveCamera:
@@ -103,14 +109,14 @@ main{min-width:0;width:100%;max-width:none;grid-column:1;grid-row:1}
 @media(max-width:900px){body{display:block}.live-camera{position:sticky;top:0;z-index:3}.live-camera img{max-height:36vh;object-fit:contain}}
 </style><aside class="live-camera"><h2>ライブカメラ</h2><img id="live-camera" alt="現在のカメラ映像">
 <p id="live-camera-state" role="status">映像を接続中…</p>
-<p>青枠は校正時の格子の外周です。紙の同じ交点と重なるか確認してください。橙の十字は選択した紙上の点です。記録時は同じカメラの新しいフレームを保存します。</p></aside>'''
+<p>スポンジは緑、コイン（ターゲット）は紫の検出枠で表示します。数値は検出の信頼度です。記録用画像は枠のない元画像を保存します。</p></aside>'''
 
 
 def camera_script():
     return '''<script>
 const liveImage=document.getElementById('live-camera');
 const liveState=document.getElementById('live-camera-state');
-function updateCamera(){const point=document.getElementById('calibration-point')?.value||'1';const candidate=typeof transferCandidate!=='undefined'&&transferCandidate?transferCandidate:(typeof positionCandidate!=='undefined'?positionCandidate:null);const xy=candidate?'&x='+candidate.target_xyz_mm[0]+'&y='+candidate.target_xyz_mm[1]:'';liveImage.src='/live.jpg?point='+encodeURIComponent(point)+xy+'&t='+Date.now();}
+function updateCamera(){liveImage.src='/live.jpg?t='+Date.now();}
 liveImage.onload=()=>{liveState.textContent='ライブ映像 更新 '+new Date().toLocaleTimeString();setTimeout(updateCamera,120);};
 liveImage.onerror=()=>{liveState.textContent='映像が更新できません。表示中の画像は現在の状態ではありません。';setTimeout(updateCamera,1000);};
 updateCamera();
@@ -137,12 +143,23 @@ def main():
     saved=json.loads(args.calibration.read_text())
     source=saved['camera']
     camera=LiveCamera(source,saved['image_size'])
+    detector=LiveDetector(camera,ROOT/'runs/sponge_comparison/yolo11n/weights/best.pt')
     server=None
     try:
         calibration=load_calibration(args.calibration,source,tuple(saved['image_size']))
         targets={p['number']:p['expected_mm'] for p in calibration['points']}
         inverse=np.linalg.inv(calibration['matrix'])
-        fine_lock=threading.Lock()
+        fine_lock=threading.RLock()
+        def arm_send(action):
+            request=Request(args.arm_url+'/api',data=json.dumps(action).encode(),
+                headers={'Content-Type':'application/json','X-Arm-Token':panel_token})
+            try:
+                with urlopen(request,timeout=5) as response:return json.loads(response.read())
+            except HTTPError as error:
+                detail=json.loads(error.read())
+                raise ValueError(detail.get('error','操作を実行できません。')) from error
+        recorder=DemonstrationRecorder(ROOT/'data/imitation',camera,arm_send)
+        trial=None
         class Handler(BaseHTTPRequestHandler):
             def send(self,code,content,mime,headers=None):
                 self.send_response(code)
@@ -156,6 +173,10 @@ def main():
                 except (BrokenPipeError,ConnectionResetError):pass
 
             def relay(self,method):
+                with fine_lock:
+                    self.relay_locked(method)
+
+            def relay_locked(self,method):
                 headers={}
                 body=None
                 if method=='POST':
@@ -170,6 +191,8 @@ def main():
                         data=json.loads(body)
                     except (ValueError,TypeError):
                         data=None
+                    if recorder.active and (not isinstance(data,dict) or data.get('action') not in ('status','stop')):
+                        self.send(409,json.dumps({'error':'デモ記録中は模倣学習の記録用矢印を使ってください。'}).encode(),'application/json');return
                     if isinstance(data,dict) and data.get('action')=='fine_step':
                         self.handle_fine(data,headers);return
                 request=Request(args.arm_url+self.path,data=body,headers=headers,method=method)
@@ -194,6 +217,14 @@ def main():
                                     markup,script=controls.split('<script>',1)
                                     page=page.replace('</main>',markup+'</main>',1)
                                     page=page.replace('</html>','<script>'+script+'</html>')
+                            controls=(ROOT/'vision/imitation_controls.html').read_text().replace('__TOKEN__',token)
+                            markup,script=controls.split('<script>',1)
+                            page=page.replace('<main>','<main>'+markup,1)
+                            page=page.replace('</html>','<script>'+script+'</html>')
+                            controls=(ROOT/'vision/imitation_trial_controls.html').read_text().replace('__TOKEN__',token)
+                            markup,script=controls.split('<script>',1)
+                            page=page.replace('<main>','<main>'+markup,1)
+                            page=page.replace('</html>','<script>'+script+'</html>')
                             content=page.replace('</html>',camera_script()+'</html>').encode()
                         self.send(response.status,content,mime)
                 except HTTPError as error:
@@ -221,28 +252,11 @@ def main():
                     if path.path=='/camera-info':
                         self.send(200,json.dumps({'service':'arm-calibration-live-camera-v1','camera':source}).encode(),'application/json');return
                     if path.path in ('/live.jpg','/snapshot.png'):
-                        frame,stamp,sequence=camera.snapshot(fresh=path.path=='/snapshot.png')
                         if path.path=='/live.jpg':
-                            corners=np.rint(calibration['corners_px']).astype(np.int32)
-                            cv2.polylines(frame,[corners],True,(220,150,40),2,cv2.LINE_AA)
-                            for label,corner in zip(('1','7','42','36'),corners):
-                                cv2.putText(frame,label,tuple(corner+np.array([4,-6])),
-                                            cv2.FONT_HERSHEY_SIMPLEX,.45,(220,150,40),1,cv2.LINE_AA)
-                            point=int(parse_qs(path.query).get('point',['1'])[0])
-                            query=parse_qs(path.query)
-                            if 'x' in query and 'y' in query:
-                                xy=[float(query['x'][0]),float(query['y'][0])]
-                                if not np.isfinite(xy).all():raise ValueError('座標が不正です。')
-                                label=f'Target XY={xy} mm / Z=0 assumed'
-                            else:
-                                xy=targets.get(point)
-                                label=f'#{point}: {xy} mm'
-                            if xy is not None:
-                                uv=project(inverse,[xy])[0]
-                                cv2.drawMarker(frame,tuple(map(round,uv)),(0,170,255),cv2.MARKER_CROSS,22,2)
-                                cv2.putText(frame,label,(8,22),cv2.FONT_HERSHEY_SIMPLEX,.5,(0,170,255),1,cv2.LINE_AA)
+                            frame,stamp,sequence=detector.snapshot()
                             ok,encoded=cv2.imencode('.jpg',frame,[cv2.IMWRITE_JPEG_QUALITY,85]);mime='image/jpeg'
                         else:
+                            frame,stamp,sequence=camera.snapshot(fresh=True)
                             ok,encoded=cv2.imencode('.png',frame);mime='image/png'
                         if not ok:raise RuntimeError('画像を変換できません。')
                         self.send(200,encoded.tobytes(),mime,{'X-Camera-Source':source,'X-Frame-Captured-At':stamp,'X-Frame-Sequence':sequence});return
@@ -253,7 +267,54 @@ def main():
                     self.send(503,json.dumps({'error':str(error)},ensure_ascii=False).encode(),'application/json')
 
             def do_POST(self):
-                if self.path=='/api':self.relay('POST')
+                nonlocal trial
+                if self.path=='/policy':
+                    if self.headers.get('X-Arm-Token')!=panel_token:
+                        self.send(403,b'{}','application/json');return
+                    try:
+                        length=int(self.headers.get('Content-Length','0'))
+                        if not 0<length<=1024:raise ValueError('入力の長さが不正です。')
+                        data=json.loads(self.rfile.read(length))
+                        with fine_lock:
+                            if recorder.active:raise ValueError('デモ記録を終了してからAI試行を使ってください。')
+                            if trial is None:
+                                guide_path=ROOT/'runs/imitation_bc/base_alignment.json'
+                                trial=PolicyTrial(ImitationPolicy(ROOT/'runs/imitation_bc/policy.pt'),detector,arm_send,
+                                    BaseAlignment(guide_path) if guide_path.exists() else None,MotionOrder())
+                            if data.get('action')=='preview':result=trial.preview(data.get('phase'),use_base_alignment=data.get('base_alignment',True) is True,
+                                use_motion_order=data.get('motion_order',True) is True)
+                            elif data.get('action')=='advance_order':result=trial.advance_order()
+                            elif data.get('action')=='confirm_lift':result=trial.confirm_lift()
+                            elif data.get('action')=='reset_order':result=trial.reset_order()
+                            elif data.get('action')=='execute':result=trial.execute(data.get('ticket'))
+                            else:raise ValueError('AI試行の操作が不正です。')
+                        self.send(200,json.dumps(result,ensure_ascii=False).encode(),'application/json')
+                    except (ValueError,RuntimeError,OSError,KeyError,TypeError) as error:
+                        self.send(400,json.dumps({'error':str(error)},ensure_ascii=False).encode(),'application/json')
+                elif self.path=='/demo':
+                    if self.headers.get('X-Arm-Token')!=panel_token:
+                        self.send(403,b'{}','application/json');return
+                    try:
+                        length=int(self.headers.get('Content-Length','0'))
+                        if not 0<length<=4096:raise ValueError('入力の長さが不正です。')
+                        data=json.loads(self.rfile.read(length))
+                        with fine_lock:
+                            action=data.get('action')
+                            if action=='status':result=recorder.info()
+                            elif action=='start':result=recorder.start(data.get('note',''))
+                            elif action=='phase':result=recorder.set_phase(data.get('phase'))
+                            elif action=='step':result=recorder.action(data.get('joint'),data.get('direction'),degrees=data.get('degrees',1))
+                            elif action=='jog':result=recorder.jog(data.get('joint'),data.get('direction'))
+                            elif action=='stop_jog':result=recorder.stop_jog()
+                            elif action=='wait':result=recorder.action(wait=True)
+                            elif action=='finish':result=recorder.finish(data.get('outcome'),data.get('note',''))
+                            else:raise ValueError('記録操作が不正です。')
+                        self.send(200,json.dumps(result,ensure_ascii=False).encode(),'application/json')
+                    except (ValueError,RuntimeError,OSError,KeyError,TypeError) as error:
+                        self.send(400,json.dumps({'error':str(error)},ensure_ascii=False).encode(),'application/json')
+                elif recorder.active and self.path!='/api':
+                    self.send(409,json.dumps({'error':'デモ記録を終了してから操作してください。'}).encode(),'application/json')
+                elif self.path=='/api':self.relay('POST')
                 elif self.path in ('/transfer/point','/transfer/preview','/transfer/record'):
                     if self.headers.get('X-Arm-Token')!=panel_token:
                         self.send(403,b'{}','application/json');return
@@ -339,6 +400,9 @@ def main():
         server.serve_forever()
     finally:
         if server:server.server_close()
+        if 'recorder' in locals() and recorder.active:
+            with fine_lock:recorder.finish('aborted','カメラサーバー終了')
+        detector.close()
         camera.close()
 
 

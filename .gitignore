@@ -4,8 +4,9 @@
 .venv-ai/
 /data/*
 !/data/sponge/
+
 /runs/*
-!/runs/arm_calibration/
+
 !/runs/arm_kinematics/
 !/runs/arm_position_tests/
 !/runs/arm_reproducibility/
@@ -13,10 +14,12 @@
 !/runs/pick_place/
 !/runs/sponge_comparison/
 !/runs/training_test/
+!/runs/imitation_bc/
 # 学習の再開用・比較用重みは保存せず、実機で使う最良重みだけ残す
 /runs/**/*.pt
 /runs/**/*.pth
 !/runs/sponge_comparison/yolo11n/weights/best.pt
+!/runs/imitation_bc/policy.pt
 /runs/**/events.out.tfevents*
 models/
 __pycache__/
@@ -35,3 +38,13 @@ docs/images/assembly/originals/
 
 # 元の実機デモ動画（変換後のMP4を利用）
 /IMG_2769.MOV
+
+# 実機の教師画像・操作ログはローカル保管
+/data/imitation/
+# 模倣学習は小さなモデル・設定・評価要約だけを公開
+/runs/imitation_bc/*
+!/runs/imitation_bc/policy.pt
+!/runs/imitation_bc/report.json
+!/runs/imitation_bc/evaluation.png
+!/runs/imitation_bc/base_alignment.json
+!/runs/imitation_bc/base_alignment_comparison.json

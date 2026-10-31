@@ -73,6 +73,15 @@ class PositionTestTests(unittest.TestCase):
                 self.assertEqual(responses[-1][0],200)
                 html=responses[-1][1].decode()
                 self.assertIn('position-calculate',html)
+                self.assertIn('demo-start',html)
+                self.assertIn('demo-phase',html)
+                for token, expected in [('wrong',403),('test-token',200)]:
+                    body=b'{"action":"status"}'
+                    handler.path='/demo';handler.rfile=io.BytesIO(body)
+                    handler.headers={'Content-Length':str(len(body)),'X-Arm-Token':token}
+                    handler.do_POST()
+                    self.assertEqual(responses[-1][0],expected)
+                    if expected==200:self.assertFalse(json.loads(responses[-1][1])['active'])
                 self.assertNotIn('__TOKEN__',html)
                 self.assertLess(html.index('function enqueue('),html.index('let positionCandidate='))
                 for token,xy,expected in [('wrong',[15,135],403),('test-token',[15,135],200),('test-token',[100,100],400)]:
@@ -84,7 +93,7 @@ class PositionTestTests(unittest.TestCase):
                 handler.path='/position-test/record';body=b'{"x":15,"y":135}'
                 handler.rfile=io.BytesIO(body);handler.headers={'Content-Length':str(len(body)),'X-Arm-Token':'test-token'}
                 handler.do_POST();self.assertEqual(responses[-1][0],400)
-        with patch.object(panel,'LiveCamera',Camera),patch.object(panel,'ThreadingHTTPServer',Server),patch.object(panel,'urlopen',side_effect=lambda *a,**k:Response(original_page.encode())) as upstream,patch('sys.argv',['arm_camera_panel.py']):
+        with patch.object(panel,'LiveDetector'),patch.object(panel,'LiveCamera',Camera),patch.object(panel,'ThreadingHTTPServer',Server),patch.object(panel,'urlopen',side_effect=lambda *a,**k:Response(original_page.encode())) as upstream,patch('sys.argv',['arm_camera_panel.py']):
             panel.main()
             # Startup and HTML load only; preview must never send a serial action.
             self.assertEqual(upstream.call_count,2)

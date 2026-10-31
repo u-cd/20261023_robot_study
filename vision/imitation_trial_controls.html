@@ -1,0 +1,105 @@
+<section>
+<h2>学習済みAIの試行</h2>
+<p>段階を選び、今の映像と関節指令から次の操作を予測します。「予測を確認」では動きません。台座補助が有効な場合、目標に近い台座や目標から遠ざかる台座の候補を除き、残りの最大予測を選びます。「最大予測で連続実行」は長押し中、最新の入力で再予測しながら1°ずつ繰り返します。信頼度0.5未満でも実行します。</p>
+<label>段階 <select id="policy-phase"><option value="0">つかむまで</option><option value="1">はなすまで</option><option value="2">退避</option></select></label>
+<label><input type="checkbox" id="policy-motion-order" checked>操作順を固定する（台座→肩・肘→つかむ→持ち上げ→台座→肩・肘→離す→退避）</label>
+<label><input type="checkbox" id="policy-base-alignment" checked>成功例から台座の目標角度を推定して、回し続ける動きを抑える</label>
+<p id="policy-order-flow">①台座 → ②肩・肘 → ③つかむ → ④持ち上げ → ⑤台座 → ⑥肩・肘 → ⑦離す → ⑧退避</p>
+<button id="policy-order-next" disabled>予測を更新すると次の確認操作が表示されます</button><button id="policy-order-reset">操作順を最初から</button>
+<p>持ち上げ中は成功例に合わせて肩−・肘−だけを使います。高さは自動測定しません。位置合わせ・把持・持ち上げ・解放・退避の完了を目視し、長押しを離して確認ボタンで次へ進みます。開始時のグリップはスポンジを挟める程度に開いておいてください。</p>
+<button id="policy-preview">予測を確認</button><button id="policy-execute" disabled>予測した方向に1°動かす</button>
+<button id="policy-repeat" class="jog">最大予測で連続実行（長押し）</button>
+<p>離す・画面外へ出る・停止ボタンで繰り返しを止めます。送信済みの1°は完了する場合があります。段階を変えた後は押し直してください。</p>
+<p id="policy-result" role="status">モデルの試行はデモ記録を終了してから使ってください。</p>
+</section>
+<script>
+let policyTicket=null,policyBusy=false,policyHeld=false,policyGeneration=0,policyTimer=null;
+function policyGuideInfo(p){return p.base_goal_deg===undefined?(p.selection_note||''):` ｜ 台座目標 約${p.base_goal_deg.toFixed(1)}° / 差 ${p.base_error_deg.toFixed(1)}° ｜ ${p.selection_note||''}`;}
+const policyNames=['台座＋','台座−','肩＋','肩−','肘＋','肘−','グリッパー＋','グリッパー−','待機'];
+function policyOrderInfo(p){
+  $('policy-order-next').disabled=!p.order_can_advance;
+  $('policy-order-next').textContent=p.order_next_label||'順番制御を有効にしてください';
+  if(p.order_flow)$('policy-order-flow').textContent=p.order_flow.map((name,i)=>`${i+1===p.order_step?'【':''}${i+1}. ${name}${i+1===p.order_step?'】':''}`).join(' → ');
+  return p.order_label?' ｜ '+p.order_label:'';
+}
+function policyOrderChanged(){
+  policyRelease();policyTicket=null;$('policy-execute').disabled=true;
+  $('policy-order-next').disabled=true;
+  if($('policy-motion-order').checked)$('policy-base-alignment').checked=true;
+  $('policy-base-alignment').disabled=$('policy-motion-order').checked;
+}
+async function policyCall(data){
+  const response=await fetch('/policy',{method:'POST',headers:{'Content-Type':'application/json','X-Arm-Token':'__TOKEN__'},body:JSON.stringify(data)});
+  const result=await response.json();if(!response.ok)throw Error(result.error||'AI試行に失敗しました。');return result;
+}
+function policyRelease(){policyHeld=false;policyGeneration++;clearTimeout(policyTimer);}
+$('policy-motion-order').onchange=policyOrderChanged;
+$('policy-base-alignment').onchange=()=>{policyRelease();policyTicket=null;$('policy-execute').disabled=true;};
+$('policy-phase').onchange=policyOrderChanged;
+$('policy-preview').onclick=async()=>{
+  if(policyBusy||policyHeld)return;policyBusy=true;policyTicket=null;$('policy-execute').disabled=true;
+  try{
+    const p=await policyCall({action:'preview',phase:Number($('policy-phase').value),base_alignment:$('policy-base-alignment').checked,motion_order:$('policy-motion-order').checked});
+    $('policy-result').textContent=`予測：${policyNames[p.label]} ｜ 信頼度 ${(p.confidence*100).toFixed(1)}% ｜ 学習した操作量 ${p.predicted_amount_deg.toFixed(1)}° ｜ 試行は1°のみ。${p.blocked_reasons.join(' ')}${policyGuideInfo(p)}${policyOrderInfo(p)}`;
+    policyTicket=p.ticket;$('policy-execute').disabled=!p.can_execute;
+  }catch(error){$('policy-result').textContent=error.message;}finally{policyBusy=false;}
+};
+$('policy-execute').onclick=async()=>{
+  if(policyBusy||policyHeld||!policyTicket)return;policyBusy=true;$('policy-execute').disabled=true;
+  const ticket=policyTicket;policyTicket=null;
+  try{
+    const result=await policyCall({action:'execute',ticket});
+    connected=result.state.connected;joints=result.state.joints;render();
+    $('policy-result').textContent=result.moved?'1°の指令変更を確認しました。実際の動きを確認し、次は予測を更新してください。':'待機の予測でした。';
+  }catch(error){$('policy-result').textContent=error.message;}finally{policyBusy=false;}
+};
+$('policy-repeat').onpointerdown=async event=>{
+  if(event.button!==0||policyBusy||policyHeld)return;
+  event.preventDefault();policyHeld=true;const generation=++policyGeneration;
+  const phase=Number($('policy-phase').value);policyTicket=null;$('policy-execute').disabled=true;
+  async function tick(){
+    if(!policyHeld||generation!==policyGeneration)return;
+    policyBusy=true;
+    try{
+      const p=await policyCall({action:'preview',phase,base_alignment:$('policy-base-alignment').checked,motion_order:$('policy-motion-order').checked});
+      if(!policyHeld||generation!==policyGeneration)return;
+      $('policy-result').textContent=`連続実行：${policyNames[p.label]} ｜ 信頼度 ${(p.confidence*100).toFixed(1)}% ${p.blocked_reasons.join(' ')}${policyGuideInfo(p)}${policyOrderInfo(p)}`;
+      if(!p.can_execute)throw Error(p.blocked_reasons.join(' '));
+      const result=await policyCall({action:'execute',ticket:p.ticket});
+      connected=result.state.connected;joints=result.state.joints;render();
+      if(policyHeld&&generation===policyGeneration)policyTimer=setTimeout(tick,60);
+    }catch(error){policyRelease();$('policy-result').textContent=error.message;}
+    finally{policyBusy=false;}
+  }
+  await tick();
+};
+$('policy-repeat').onpointerleave=policyRelease;
+$('policy-repeat').onpointercancel=policyRelease;
+$('policy-repeat').oncontextmenu=event=>event.preventDefault();
+$('policy-repeat').onkeydown=event=>{
+  if((event.key===' '||event.key==='Enter')&&!event.repeat){
+    event.preventDefault();$('policy-repeat').onpointerdown({button:0,preventDefault(){}});
+  }
+};
+$('policy-repeat').onkeyup=event=>{if(event.key===' '||event.key==='Enter')policyRelease();};
+document.addEventListener('pointerup',policyRelease);
+window.addEventListener('blur',policyRelease);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)policyRelease();});
+$('stop').addEventListener('click',policyRelease);
+for(const [id,action] of [['policy-order-next','advance_order'],['policy-order-reset','reset_order']]){
+  $(id).onclick=async()=>{
+    policyRelease();
+    if(policyBusy){$('policy-result').textContent='操作が完了してからもう一度押してください。';return;}
+    policyBusy=true;policyTicket=null;$('policy-execute').disabled=true;
+    try{
+      const result=await policyCall({action});
+      if(result.phase!==undefined&&result.phase!==null)$('policy-phase').value=String(result.phase);
+      if(result.order_stage)policyOrderInfo(result);
+      else{$('policy-order-next').disabled=true;$('policy-order-flow').textContent='操作順をリセットしました。予測を更新してください。';}
+      $('policy-result').textContent=result.message;
+    }
+    catch(error){$('policy-result').textContent=error.message;}finally{policyBusy=false;}
+  };
+}
+policyOrderChanged();
+</script>

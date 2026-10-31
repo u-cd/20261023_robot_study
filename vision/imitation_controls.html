@@ -1,0 +1,82 @@
+<section id="demo-section">
+<h2>模倣学習：手動デモ記録</h2>
+<p>準備：通常操作で全関節を有効にし、手首を80°にします。開始姿勢は変更できます。記録中は下の専用矢印で操作してください。</p>
+<label>配置・条件のメモ <input id="demo-note" maxlength="1000" placeholder="スポンジ左、ターゲット右など"></label>
+<button id="demo-start">デモ記録開始</button>
+<p>①つかむまで：接近・開く・下降・微調整・つかむ。②はなすまで：持ち上げ・搬送・下降・位置合わせ・グリップを開いてスポンジを離すまで。③退避：離した後にアームを退避。各段階では自由に微調整できます。</p>
+<label>今から行う段階 <select id="demo-phase"></select></label>
+<label>操作モード <select id="demo-mode"><option value="jog" selected>連続移動（長押し）</option><option value="step">微調整（1°）</option></select></label>
+<div id="demo-joints" style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:12px 0"></div>
+<button id="demo-wait">必要な待機を記録（0.2秒）</button>
+<p>長押し中は設定済みの指令速度で連続して動き、離すと停止します。撮影・保存のために1°ごとに停止しません。位置合わせは「微調整（1°）」へ切り替えてください。</p>
+<button id="demo-success">成功して保存</button><button id="demo-failure">失敗して破棄</button><button id="demo-abort">中断して破棄</button>
+<p>成功した試行だけ保存します。失敗・中断では、その試行の画像と操作記録をすべて削除します。</p>
+<p id="demo-state" role="status">記録状態を確認中…</p>
+</section>
+<script>
+const demoPhases=["つかむまで", "はなすまで", "退避"];
+let demoActive=false,demoBusy=false,demoHeld=false,demoGeneration=0,demoTimer=null,demoStopping=false,demoPending=Promise.resolve();
+for(const [index,name] of demoPhases.entries())$('demo-phase').add(new Option(`${index+1}. ${name}`,index));
+for(const [joint,name] of [[1,'台座'],[2,'肩'],[3,'肘'],[5,'グリッパー']]){
+  $('demo-joints').insertAdjacentHTML('beforeend',`<article style="text-align:center"><h3>${name}</h3><button class="jog" data-demo-joint="${joint}" data-demo-direction="+">▲ ＋</button><strong id="demo-angle-${joint}">—</strong><button class="jog" data-demo-joint="${joint}" data-demo-direction="-">▼ −</button></article>`);
+}
+function demoRender(info){
+  demoActive=info.active;$('demo-phase').value=info.phase;
+  $('demo-state').textContent=`${info.active?'● 記録中':'記録停止'} ｜ ${info.count}操作 ｜ ${info.path||(['failure','aborted'].includes(info.outcome)?'データを破棄しました':'未開始')}${info.outcome?' ｜ '+info.outcome:''}`;
+  $('demo-start').disabled=info.active;
+  for(const id of ['demo-phase','demo-wait','demo-success','demo-failure','demo-abort'])$(id).disabled=!info.active;
+  for(const b of document.querySelectorAll('[data-demo-joint]'))b.disabled=!info.active;
+  if(info.state){connected=info.state.connected;joints=info.state.joints;render();}
+  for(const j of joints)if($('demo-angle-'+j.joint))$('demo-angle-'+j.joint).textContent=j.angle+'°';
+}
+async function demoCall(data){
+  const response=await fetch('/demo',{method:'POST',headers:{'Content-Type':'application/json','X-Arm-Token':'__TOKEN__'},body:JSON.stringify(data)});
+  const result=await response.json();
+  if(!response.ok)throw Error(result.error||'記録通信に失敗しました。');
+  demoRender(result);return result;
+}
+function demoRelease(){
+  const was=demoHeld;demoHeld=false;demoGeneration++;clearTimeout(demoTimer);
+  if(was&&!demoStopping){
+    demoStopping=true;
+    demoPending.catch(()=>{}).then(()=>demoCall({action:'stop_jog'}))
+      .catch(error=>{$('demo-state').textContent=error.message;})
+      .finally(()=>{demoStopping=false;});
+  }
+}
+function demoError(error){demoRelease();$('demo-state').textContent=error.message;}
+async function demoOnce(data){
+  if(demoBusy||demoStopping)return;demoBusy=true;
+  demoPending=demoCall(data);
+  try{await demoPending;}catch(error){demoError(error);}finally{demoBusy=false;}
+}
+for(const button of document.querySelectorAll('[data-demo-joint]')){
+  const data={joint:Number(button.dataset.demoJoint),direction:button.dataset.demoDirection};
+  button.onpointerdown=async event=>{
+    if(event.button!==0||demoBusy||demoStopping||demoHeld||!demoActive)return;
+    event.preventDefault();
+    if($('demo-mode').value==='step'){await demoOnce({...data,action:'step',degrees:1});return;}
+    demoHeld=true;const generation=++demoGeneration;
+    const repeat=async()=>{
+      if(!demoHeld||generation!==demoGeneration||!demoActive)return;
+      await demoOnce({...data,action:'jog'});
+      if(demoHeld&&generation===demoGeneration)demoTimer=setTimeout(repeat,60);
+    };await repeat();
+  };
+  button.onpointerleave=demoRelease;button.onpointercancel=demoRelease;
+  // Keyboard activation remains a bounded 1-degree step.
+  button.onclick=event=>{if(event.detail===0)demoOnce({...data,action:'step',degrees:1});};
+  button.oncontextmenu=event=>event.preventDefault();
+}
+document.addEventListener('pointerup',demoRelease);window.addEventListener('blur',demoRelease);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)demoRelease();});
+$('stop').addEventListener('click',demoRelease);
+$('demo-mode').onchange=demoRelease;
+$('demo-start').onclick=()=>{cancelHold();demoOnce({action:'start',note:$('demo-note').value});};
+$('demo-phase').onchange=()=>{demoRelease();if(demoBusy||demoStopping){$('demo-state').textContent='操作の完了後に段階を選び直してください。';return;}demoOnce({action:'phase',phase:Number($('demo-phase').value)});};
+$('demo-wait').onclick=()=>demoOnce({action:'wait'});
+for(const [id,outcome] of [['demo-success','success'],['demo-failure','failure'],['demo-abort','aborted']]){
+  $(id).onclick=()=>{demoRelease();if(demoBusy||demoStopping){$('demo-state').textContent='操作の完了後にもう一度終了を押してください。';return;}demoOnce({action:'finish',outcome,note:$('demo-note').value});};
+}
+demoCall({action:'status'}).catch(demoError);
+</script>
