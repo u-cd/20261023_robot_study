@@ -8,7 +8,7 @@ import sys
 
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT))
-from control.imitation_record import ACTIONS, PHASES
+from control.imitation_schema import ACTIONS, PHASES
 
 FEATURE_NAMES = ['sponge_u', 'sponge_v', 'target_u', 'target_v',
                  'sponge_confidence', 'target_confidence', 'sponge_visible', 'target_visible',
@@ -81,7 +81,7 @@ def extract_episode(episode, weights, model):
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument('episode', type=Path)
-    parser.add_argument('--weights', type=Path, default=ROOT/'runs/sponge_comparison/yolo11n/weights/best.pt')
+    parser.add_argument('--weights', type=Path, default=ROOT/'models/yolo11n_sponge.pt')
     args = parser.parse_args()
     from ultralytics import YOLO
     import torch

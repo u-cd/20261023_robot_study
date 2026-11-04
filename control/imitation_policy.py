@@ -5,7 +5,7 @@ import numpy as np
 import torch
 from torch import nn
 
-from control.imitation_record import ACTIONS, PHASES
+from control.imitation_schema import ACTIONS, PHASES
 from vision.prepare_imitation import FEATURE_NAMES, features
 
 

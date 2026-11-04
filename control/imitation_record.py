@@ -11,10 +11,9 @@ import time
 import cv2
 
 from control.fine_step import fine_step
-from vision.arm_position_test import stationary_commands
+from control.arm_state import stationary_commands
 
-PHASES = ['つかむまで', 'はなすまで', '退避']
-ACTIONS = ['base+', 'base-', 'shoulder+', 'shoulder-', 'elbow+', 'elbow-', 'gripper+', 'gripper-', 'wait']
+from control.imitation_schema import ACTIONS, PHASES
 
 
 def now():

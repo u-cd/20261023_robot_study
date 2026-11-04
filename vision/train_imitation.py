@@ -20,7 +20,7 @@ import numpy as np
 import torch
 from torch import nn
 from control.imitation_policy import PolicyNet
-from control.imitation_record import ACTIONS, PHASES
+from control.imitation_schema import ACTIONS, PHASES
 from vision.prepare_imitation import FEATURE_NAMES, extract_episode
 
 
@@ -33,7 +33,7 @@ def main():
     args.output.mkdir(parents=True,exist_ok=True)
     start=time.monotonic();cpu_start=time.process_time()
     torch.set_num_threads(2);torch.manual_seed(42);np.random.seed(42);random.seed(42)
-    weights=ROOT/'runs/sponge_comparison/yolo11n/weights/best.pt'
+    weights=ROOT/'models/yolo11n_sponge.pt'
     sha=hashlib.sha256(weights.read_bytes()).hexdigest()
     folders=[p.parent for p in sorted(args.data.glob('*/episode.json'))
              if json.loads(p.read_text()).get('outcome')=='success']

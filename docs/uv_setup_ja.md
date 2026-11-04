@@ -1,50 +1,61 @@
-# uvによる環境構築・実行
+# 環境構築と実行コマンド
 
-2026年10月31日、依存関係を `pyproject.toml` と `uv.lock` へ統合した。Python 3.12、Linux x86_64で使用する。PyTorch 2.5.1 / torchvision 0.20.1はCPU版の公式インデックスへ固定している。
-
-## 環境の準備
+Python 3.12・Linux x86_64・uvを使用。PyTorchとtorchvisionはCPU版へ固定している。
 
 ```bash
 uv sync --locked
 ```
 
-`.python-version` に従ってPython 3.12を使い、プロジェクト内の `.venv` に依存を同期する。`source activate` は不要。uv自体はこのPCの `~/.local/bin/uv` に配置済み。別PCでは [uv公式のインストール手順](https://docs.astral.sh/uv/getting-started/installation/) を参照。
+環境の手動有効化は不要。以下のコマンドはプロジェクトルートから実行する。
 
-## アームとカメラ
-
-ターミナル1：
+## 手動操作と収集
 
 ```bash
-uv run python control/arm_panel.py --record-calibration
+uv run python control/arm_panel.py
 ```
 
-ターミナル2：
+別のターミナルで：
 
 ```bash
 uv run python vision/arm_camera_panel.py
 ```
 
-操作画面は <http://127.0.0.1:8766>。終了はそれぞれCtrl+C。これらの起動だけではアームを動かさない。
+<http://127.0.0.1:8766> を開く。手動操作だけなら <http://127.0.0.1:8765>。校正ファイルは不要。カメラ設定は `configs/camera.json`。各ターミナルのCtrl+Cで終了する。
 
-## 検出・学習・検証
+任意の検出枠を表示する場合：
 
 ```bash
-uv run python vision/live_detect.py
-uv run python vision/run_experiments.py
+uv run python vision/arm_camera_panel.py --detections
+```
+
+その場合は `models/yolo11n_sponge.pt`、または `--weights` で指定した重みが必要。既存の検出重みはローカルに残している。ACTの学習にはYOLOは不要。
+
+## 学習・推論
+
+```bash
+uv run python vision/act_smoke.py --steps 200
+uv run python vision/infer_act_smoke.py --episode 20261031T013236_735561Z --index 2
+```
+
+既存MLPの再学習：
+
+```bash
+uv run python vision/train_imitation.py
+```
+
+既存の `features.json` が使える場合は検出特徴を再利用する。再抽出が必要なら `models/yolo11n_sponge.pt` を使用する。元画像・操作ログは変更せず、派生した検出特徴を保存する。
+
+## テスト
+
+```bash
 uv run python -m unittest discover -s tests
 ```
 
-ライブ検出と映像付き操作画面は同じカメラを使うため、同時には起動しない。学習にはデータ分割の再生成、事前学習重み、DEIM公式実装の準備が別途必要。[学習手順](training_test_ja.md)・[6モデル比較](model_comparison_ja.md)を参照。
+## 管理範囲
 
-## 管理するファイル
-
-- `pyproject.toml`：直接依存、Pythonの範囲、CPU版PyTorchの取得元。
-- `uv.lock`：間接依存も含めた解決結果と配布物のハッシュ。
-- `.python-version`：使用するPython系列。
+- `pyproject.toml`：直接依存とPythonの範囲。
+- `uv.lock`：間接依存を含む固定結果。
 - `.venv/`：ローカル環境。Git管理外。
+- `data/`、`models/`、`runs/`、`.local_history/`：ローカルデータ・重み・出力・履歴。Git管理外。
 
-旧requirementsファイルは削除し、依存の定義を一本化した。撮影用の子プロセスも、操作サーバーと同じPython環境を使う。過去の学習ログにある `.venv-ai` の記載は当時の実行記録。
-
-移行後、36件のテストが成功し、保存済みYOLO11nで既存画像のスポンジ・ターゲット2件をCPU推論できることを確認した。旧 `.venv-ai/` とuv導入時の一時ファイルを削除し、実行環境を `.venv/` に統一した。
-
-参考：[uv公式のPyTorch連携](https://docs.astral.sh/uv/guides/integration/pytorch/)。
+参考：[uv](https://docs.astral.sh/uv/)、[CPU版PyTorchの設定](https://docs.astral.sh/uv/guides/integration/pytorch/)。

@@ -1,50 +1,27 @@
+# Local tools and Python environment
 .tools/
 .build/
 .venv/
 .venv-ai/
-/data/*
-!/data/sponge/
-
-/runs/*
-
-!/runs/arm_kinematics/
-!/runs/arm_position_tests/
-!/runs/arm_reproducibility/
-!/runs/table_calibration/
-!/runs/pick_place/
-!/runs/sponge_comparison/
-!/runs/training_test/
-!/runs/imitation_bc/
-# 学習の再開用・比較用重みは保存せず、実機で使う最良重みだけ残す
-/runs/**/*.pt
-/runs/**/*.pth
-!/runs/sponge_comparison/yolo11n/weights/best.pt
-!/runs/imitation_bc/policy.pt
-/runs/**/events.out.tfevents*
-models/
 __pycache__/
 *.pyc
 
+# Raw demonstrations, model downloads, historical photos and measurements
+/data/
+/models/
+/.local_history/
+/reference/
 
-# メーカー配布教材・変換前写真・配布ツールはローカル保管
-reference/adeept_arm_v4_official_tutorials/
-reference/DEIM/
-reference/DEIMv2/
-docs/images/assembly/originals/
-*.HEIC
-*.heic
-*.zip
-*.AppImage
-
-# 元の実機デモ動画（変換後のMP4を利用）
-/IMG_2769.MOV
-
-# 実機の教師画像・操作ログはローカル保管
-/data/imitation/
-# 模倣学習は小さなモデル・設定・評価要約だけを公開
+# Experiment outputs; retain only the small existing MLP baseline
+/runs/*
+!/runs/imitation_bc/
 /runs/imitation_bc/*
 !/runs/imitation_bc/policy.pt
 !/runs/imitation_bc/report.json
 !/runs/imitation_bc/evaluation.png
-!/runs/imitation_bc/base_alignment.json
-!/runs/imitation_bc/base_alignment_comparison.json
+
+*.HEIC
+*.heic
+*.MOV
+*.zip
+*.AppImage

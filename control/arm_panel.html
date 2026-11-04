@@ -32,16 +32,7 @@ button{background:#f3f6fa;cursor:pointer}button:disabled{opacity:.42;cursor:defa
 </section>
 <div class="grid-wrap"><div class="joints" id="joints"></div></div>
 <p class="muted">長押しは0.3秒後に開始。矢印を離す・領域から出る・画面のフォーカスが外れると移動指令を停止します。同時に動かすのは1関節です。</p>
-<section id="calibration-section" hidden>
-<h2>紙上の点と関節指令を記録</h2>
-<p>基準点：閉じたグリッパー先端の中心。紙はそのまま固定し、届く交点の直上へ、紙に触れないぎりぎりの位置で合わせます。高さは未測定です。</p>
-<div class="row"><label for="calibration-point">紙の点番号</label><select id="calibration-point"></select>
-<label for="calibration-approach">接近方向</label><select id="calibration-approach"><option value="unspecified">未分類</option><option value="same_direction">同じ方向から</option><option value="opposite_direction">逆方向から</option></select></div>
-<p><label><input type="checkbox" id="calibration-confirm">グリップが閉じ、先端中心が選んだ交点の直上で紙に触れず、静止しています</label></p>
-<div class="row"><input id="calibration-note" maxlength="200" placeholder="メモ（任意）" aria-label="記録メモ"><button id="calibration-save" class="primary" disabled>この点の指令値と写真を記録</button></div>
-<p class="muted">記録では移動指令を送りません。角度は実測値ではなく指令値です。十字は紙上の目標点で、先端を自動検出した結果ではありません。</p>
-<p id="calibration-result" role="status"></p><img id="calibration-image" hidden style="max-width:100%;height:auto" alt="保存した先端と紙上の目標点の確認画像">
-</section>
+
 <section>
 <div id="message" role="status" aria-live="polite">接続後、操作したい関節の列で有効化してください。</div>
 <p class="note muted">最初の有効化は開始角度へ急に動く場合があります。保持解除で肩・肘が落下する場合があります。確認済みの角度を使い、必要な支持を行ってください。</p>
@@ -52,7 +43,6 @@ button{background:#f3f6fa;cursor:pointer}button:disabled{opacity:.42;cursor:defa
 const $=id=>document.getElementById(id);
 const definitions=[['台座','D9'],['肩','D6'],['肘','D5'],['手首','D3'],['グリッパー','D11']];
 const defaultAngles=[90,0,0,80,90];
-const calibrationPoints=__CALIBRATION_POINTS__;
 let connected=false,joints=[],held=false,heldJoint=null,epoch=0,timer=null,busy=false,chain=Promise.resolve();
 for(let joint=1;joint<=5;joint++){
   const [name,pin]=definitions[joint-1],grip=joint===5;
@@ -78,7 +68,6 @@ for(let joint=1;joint<=5;joint++){
 function render(){
   $('connect').disabled=connected||busy;$('disconnect').disabled=!connected||busy||held;
   for(const id of ['refresh','stop'])$(id).disabled=!connected||busy;
-  $('calibration-save').disabled=!connected||busy||held||joints.length!==5||!joints.every(j=>j.active&&j.angle===j.target);
   for(let joint=1;joint<=5;joint++){
     const item=joints.find(x=>x.joint===joint),active=connected&&item?.active,locked=busy||held;
     $('card-'+joint).classList.toggle('active',!!active);$('card-'+joint).classList.toggle('moving',held&&heldJoint===joint);
@@ -136,7 +125,7 @@ for(let joint=1;joint<=5;joint++){
     const button=$('fine-'+name+'-'+joint);
     button.onkeydown=event=>{if(event.repeat)event.preventDefault();};
     button.onclick=async()=>{
-      busy=true;render();$('calibration-confirm').checked=false;
+      busy=true;render();
       try{await enqueue({action:'fine_step',joint,direction});}catch{}finally{busy=false;render();}
     };
   }
@@ -150,27 +139,7 @@ $('connect').onclick=async()=>{busy=true;render();show('接続中。基板の起
 $('disconnect').onclick=()=>{cancelHold();enqueue({action:'disconnect'});};
 $('refresh').onclick=()=>enqueue({action:'status'});
 $('stop').onclick=()=>{cancelHold(false);enqueue({action:'stop'});};
-if(calibrationPoints.length){
-  $('calibration-section').hidden=false;
-  for(const point of calibrationPoints){
-    const option=document.createElement('option');option.value=String(point.number);
-    option.textContent=`${point.number}番 (${point.xy[0]}, ${point.xy[1]}) mm`;
-    $('calibration-point').appendChild(option);
-  }
-  $('calibration-point').onchange=()=>{$('calibration-confirm').checked=false;};
-  $('calibration-save').onclick=async()=>{
-    if(!$('calibration-confirm').checked){show('先端の位置・閉じたグリップ・静止を確認してください。',true);return;}
-    busy=true;render();show('指令値と写真を記録中です…');
-    try{
-      const result=await enqueue({action:'record_calibration',point:Number($('calibration-point').value),confirmed:true,
-        approach:$('calibration-approach').value,note:$('calibration-note').value});
-      const sample=result.calibration_sample;
-      $('calibration-result').textContent=`保存済み ${sample.count}件：点${sample.point}・${sample.repeat}回目 / 指令 ${sample.angles.join(', ')}° / ${sample.path}`;
-      $('calibration-image').src='/calibration-image/'+sample.id;$('calibration-image').hidden=false;
-      $('calibration-confirm').checked=false;
-    }catch{}finally{busy=false;render();}
-  };
-}
+
 render();
 </script>
 </html>

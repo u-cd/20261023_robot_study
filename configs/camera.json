@@ -1,0 +1,7 @@
+{
+  "camera": "/dev/v4l/by-id/usb-EMEET_EMEET_SmartCam_C960_A251209000118420-video-index0",
+  "image_size": [
+    640,
+    480
+  ]
+}

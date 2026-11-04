@@ -1,81 +1,66 @@
-# カメラでブロックを運ぶロボットアーム
+# 自作ロボットアームでACTを学習・評価する
 
-初めてのロボット製作を通して、ハードウェア制御・運動学・画像処理を学び、実機デモと評価結果をポートフォリオとして公開するプロジェクトです。
+Adeept ADA031 V4.0と固定Webカメラを使い、人が実演したスポンジ搬送をACTで学習するプロジェクトです。ACTの実行を確認し、同じ実演データを使うMLPなどと比較して、結果をレポートにまとめることを目指します。
 
-現在はAdeept ADA031 V4.0の組み立て、USB通信、5関節の個別操作に加え、指定した位置でスポンジをつかんで持ち上げ、ターゲットへ運ぶ実機試行に成功しています。固定カメラの紙面校正、11点からの位置と関節角の推定、段階ごとの搬送操作・写真保存を実装しました。学習済みYOLO11nのライブ検出も確認済みで、検出結果から搬送位置を自動指定する連携は次の課題です。
+現在は成功27試行の生記録があり、小型ACTのオフライン学習・保存・再読込・保存画像での推論まで確認しています。原論文の完全再現ではなく、ACTによる実機搬送は未確認です。既存MLPと今回の小型ACTは入出力が異なるため、まだ公平な比較にはなっていません。
 
-## 現在の設定
+## 学習と推論
 
-| 関節 | 台座 | 肩 | 肘 | 手首 | グリッパー |
-| --- | --- | --- | --- | --- | --- |
-| 接続 | Servo1/D9 | Servo2/D6 | Servo3/D5 | Servo4/D3 | Servo5/D11 |
-| 開始角度の初期値 | 90° | 0° | 0° | 80° | 90° |
-
-開始角度は各関節を有効化したときの指令値です。接続時は自動で動かしません。標準の指令速度は25度/秒、グリッパーの暫定範囲は50〜150度です。他関節の通常使用範囲はまだ未校正です。
-
-## 次回の再開
-
-**次回最初にリマインド：[実操作の生データを十分に保存し、工程別・関節別の教師データは後処理で作る](docs/next_session_motion_data_plan_ja.md)。生記録と学習用の整形データを分けて扱う。**
-
-[模倣学習の初回評価](docs/imitation_first_evaluation_ja.md)：成功27試行で学習。未使用4試行で操作一致率52.5%、実機で台座の1°指令試行まで確認。完全自律搬送は未確認。
-
-[模倣学習の手動デモ収集手順](docs/imitation_data_collection_ja.md)：映像付き操作画面で、操作前画像・関節指令・1°操作・段階・成否を記録できます。
-
-**初回搬送時の引き継ぎ：[2026年10月31日の搬送成功・改善点メモ](docs/session_notes_20261031_ja.md)。スポンジの持ち上げとターゲットへの搬送に実機で成功。把持・解放高さは入力上5mmがよかった。現在の再開方針は上の工程設計メモを参照。**
-
-Python環境はuvで管理しています（Python 3.12、Linux x86_64、CPU版PyTorch）。最初にプロジェクト直下で実行してください。
+Python 3.12とuvを使います。現在の構成はCPU版PyTorchです。
 
 ```bash
 uv sync --locked
+uv run python vision/act_smoke.py --steps 200
 ```
 
-環境の有効化は不要です。制御・撮影・推論・学習は `uv run python ...` で実行します。[uvでの実行手順](docs/uv_setup_ja.md)。
+学習にはローカルの `data/imitation/` と `models/resnet18-f37072fd.pth` が必要です。生データや重みはGitには含めません。ResNet重みの準備方法と制約は [ACTの実験結果](docs/act_smoke_test_ja.md) を参照してください。
 
-1. アームを支持し、ケーブルの絡みとネジの締め付けを確認する。
-2. USB接続後、`ls /dev/ttyUSB* /dev/ttyACM* 2>/dev/null` でポートを確認する。
-3. プロジェクトルートで `uv run python control/arm_panel.py --record-calibration` を実行する。
-4. 別のターミナルで `uv run python vision/arm_camera_panel.py` を実行する。
-5. ブラウザで <http://127.0.0.1:8766> を開き、ポートを設定して接続する。既存の姿勢と支持を確認してから操作する。
+保存した小型ACTを、記録済み画像で試す：
 
-接続で基板がリセットされると関節の保持が解除されます。過熱時は支持して電源を外し、冷ましてください。停止ボタンは電源遮断ではありません。
+```bash
+uv run python vision/infer_act_smoke.py \
+  --episode 20261031T013236_735561Z --index 2
+```
 
-教師画像・操作ログ・検出特徴は `data/imitation/` にローカル保存し、Git管理から除外しています。Gitにはコード・小さな学習済みモデル・評価要約・ドキュメントを保存します。
+これらのコマンドは実機を動かしません。出力は `runs/act_smoke/` です。
 
-## 構成
+## 手動操作・実演収集
 
-- `firmware/arm_test/`：現在使う5関節の操作コード。
-- `control/arm_panel.py`・`arm_panel.html`：ローカル操作画面。
-- `firmware/connection_test/`・`spare_servo_90/`・`servo_serial/` と `control/send_angle.py`：学習過程の小さなサンプル。
-- `docs/`：手順、実機記録、計画、組立写真。
-- `reference/adeept_arm_v4_official_tutorials/`：AdeeptアームV4の公式教材（ローカル保管）。
+ターミナル1：
 
-Arduino CLIは `.tools/arduino-cli` にローカル配置しています。ツール本体、生成ファイル、メーカー教材、元のHEIC画像はGitに含めません。
+```bash
+uv run python control/arm_panel.py
+```
 
-## 資料
+ターミナル2：
 
-- [2026年10月31日の作業終了メモ・次回の改善点](docs/session_notes_20261031_ja.md)
-- [次回候補：模倣学習の構成・必要なデータ・最短の試行案](docs/imitation_learning_plan_ja.md)
-- [スポンジの把持・持ち上げ・搬送・解放](docs/pick_place_first_trial_ja.md)
-- [リポジトリ整理・残したデータと再生成方法](docs/repository_cleanup_20261031_ja.md)
+```bash
+uv run python vision/arm_camera_panel.py
+```
 
-- [次の工程：スポンジのAI認識と搬送](docs/ai_next_steps_ja.md)
-- [学習済みモデルでWebカメラを認識する](docs/live_detection_ja.md)
-- [机上の座標校正](docs/table_calibration_ja.md)
-- [アーム先端を紙上の点へ合わせて記録する](docs/arm_calibration_record_ja.md)
-- [11点による実効運動学モデルの推定結果](docs/arm_kinematics_fit_ja.md)
-- [2026年10月30日の校正画像・誤差結果](docs/calibration_result_20261030_ja.md)
-- [YOLO / DEIMの学習動作テスト](docs/training_test_ja.md)
-- [既存60枚での6モデルの学習・精度・速度・リソース比較（YOLO / DEIM / DEIMv2）](docs/model_comparison_ja.md)
+ブラウザで <http://127.0.0.1:8766> を開きます。カメラは `configs/camera.json` で指定します。紙面校正は不要です。検出枠も表示したい場合は、2つ目のコマンドに `--detections` を付けます（ローカルのYOLO重みが必要）。終了は各ターミナルでCtrl+Cです。
 
+接続・有効化は画面から行います。接続時の基板リセットで保持が解除されるため、先にアームを支持してください。角度は実測値ではなく指令値です。
 
-- [開発計画書（日本語）](docs/project_plan_ja.md)
-- [ネットショップ調査・購入候補](docs/parts_research_ja.md)
-- [VS Codeからコンパイル・書き込みする方法](docs/vscode_arduino_ja.md)
-- [Pythonから予備サーボを操作する](docs/python_servo_ja.md)
-- [5関節を別々に操作する手動テスト](docs/arm_test_ja.md)
-- [ボタンのクリック・長押しで操作する](docs/arm_panel_ja.md)
-- [実機テストの観察結果・制約](docs/hardware_observations_ja.md)
-- [組立写真](docs/images/assembly/README.md)
-- [初回のブロック搬送デモ動画](docs/videos/README.md)
+**人が実際に行った操作と元画像を十分に保存し、工程別・関節別の学習データは後処理で作ります。生記録を現在の工程設計に合わせて上書きしません。** 成功記録は `data/imitation/` にローカル保存し、Git管理外にします。現行仕様では失敗・中断した試行は破棄します。
 
-実機でのスポンジ搬送に成功しました。次回は、検出結果からの搬送への接続に加え、成功動作を記録して小さな模倣学習を試す案を優先候補として検討します。
+## 構成と資料
+
+- `firmware/arm_controller/`：手動操作・実演収集・モデルからの制御で共用するArduinoファームウェア。
+- `control/`：通信、手動操作、実演記録、旧MLPの予測。
+- `vision/`：カメラ、任意のライブ検出、MLPと小型ACTの学習・推論。
+- `tests/`：偽デバイスを使う収集確認とモデルのテスト。
+- `study_notes/`：[論文・翻訳・ユーザーの勉強メモ](study_notes/README.md)。
+- [今後の実験計画](experiment_plan_ja.md)
+- [環境構築・コマンド](docs/uv_setup_ja.md)
+- [実機の操作・制約](docs/hardware_observations_ja.md)
+- [実演収集](docs/imitation_data_collection_ja.md)
+- [保存形式](docs/imitation_record_format_ja.md)
+- [小型ACTの実験結果](docs/act_smoke_test_ja.md)
+- [既存MLPの評価](docs/imitation_first_evaluation_ja.md)
+
+```bash
+uv run python -m unittest discover -s tests
+```
+
+旧校正・幾何搬送・検出モデル比較・MLP補助ルールは現役コードから削除しました。過去の写真・動画・測定結果は `.local_history/cleanup_20261105/` にローカル保管しています。この履歴、`data/`、`models/`、`runs/` はGitに追加しません。Git履歴の書き換えは行っていません。

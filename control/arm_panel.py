@@ -11,6 +11,9 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 import serial
 
+# Same protocol, renamed firmware. Accept existing boards without forcing a reflash.
+FIRMWARE_IDS = (b"ARM_CONTROLLER_V3", b"ARM_TEST_V3")
+
 
 class ArmConnection:
     def __init__(self):
@@ -44,7 +47,7 @@ class ArmConnection:
                                "angle": int(match[3]), "target": int(match[4]),
                                "speed": int(match[5])})
         if len(result) != 5:
-            raise RuntimeError("基板の状態を取得できません。arm_testの新版を書き込んでください。")
+            raise RuntimeError("基板の状態を取得できません。arm_controllerの対応版を書き込んでください。")
         return result
 
     def close(self):
@@ -68,10 +71,10 @@ class ArmConnection:
                                               write_timeout=0.3, exclusive=True)
                     deadline = time.monotonic() + 8
                     while time.monotonic() < deadline:
-                        if self.port.readline().strip() == b"ARM_TEST_V3":
+                        if self.port.readline().strip() in FIRMWARE_IDS:
                             break
                     else:
-                        raise RuntimeError("新版arm_testを確認できません。書き込み後、再接続してください。")
+                        raise RuntimeError("対応するarm_controllerを確認できません。書き込み後、再接続してください。")
                     # 起動時のHELP出力をDONEまで読み切る。
                     message = self.command("STOP")
                 elif action == "disconnect":
@@ -121,25 +124,14 @@ class ArmConnection:
 def main():
     parser = argparse.ArgumentParser(description="ローカルブラウザで5関節を個別操作")
     parser.add_argument("--http-port", type=int, default=8765)
-    parser.add_argument("--record-calibration", action="store_true", help="紙上の位置・関節指令・写真の記録欄を表示")
-    parser.add_argument("--calibration", type=Path, default=Path(__file__).resolve().parents[1]/"configs/table_calibration.json")
     args = parser.parse_args()
     if __package__:
         from .fine_step import fine_step
     else:
         from fine_step import fine_step
     arm = ArmConnection()
-    recorder = None
-    if args.record_calibration:
-        if __package__:
-            from .arm_calibration import CalibrationRecorder
-        else:
-            from arm_calibration import CalibrationRecorder
-        recorder = CalibrationRecorder(arm, args.calibration)
     token = secrets.token_urlsafe(32)
     page = Path(__file__).with_name("arm_panel.html").read_text().replace("__TOKEN__", token)
-    options = recorder.point_options() if recorder else []
-    page = page.replace("__CALIBRATION_POINTS__", json.dumps(options))
 
     class Handler(BaseHTTPRequestHandler):
         def respond(self, code, content, mime="application/json"):
@@ -153,17 +145,6 @@ def main():
             self.wfile.write(body)
 
         def do_GET(self):
-            if self.path.startswith("/calibration-image/") and recorder:
-                sample_id = self.path.removeprefix("/calibration-image/")
-                if sample_id in recorder.samples:
-                    content = (recorder.session/sample_id/"marked.png").read_bytes()
-                    self.send_response(200)
-                    self.send_header("Content-Type", "image/png")
-                    self.send_header("Content-Length", str(len(content)))
-                    self.send_header("Cache-Control", "no-store")
-                    self.end_headers()
-                    self.wfile.write(content)
-                    return
             if self.path != "/":
                 self.respond(404, "{}")
                 return
@@ -180,11 +161,7 @@ def main():
                 data = json.loads(self.rfile.read(length))
                 if not isinstance(data, dict):
                     raise ValueError("操作が不正です。")
-                if data.get("action") == "record_calibration":
-                    if recorder is None:
-                        raise ValueError("校正記録モードで起動してください。")
-                    result = recorder.record(data)
-                elif data.get("action") == "fine_step":
+                if data.get("action") == "fine_step":
                     with arm.lock:
                         result = fine_step(arm.action, data)
                 else:
