@@ -19,7 +19,7 @@
 | `runs/act_robot_trials/` | 実機試験の画像・指令・推論ログ |
 | `runs/act_image_local_cpu_check_20261107/` | ローカル速度・公式前処理との一致確認 |
 
-`data/`・`models/`・`runs/`・`reference/` はGit管理外です。別PCへ移す場合はコードとともにコピーしてください。配置先が変わる場合、`data/initial_object_labels/dataset.yaml` の絶対パスも修正します。
+`data/`・`models/`・`runs/` はGit管理外です。別PCへ移す場合はコードとともにコピーしてください。配置先が変わる場合、`data/initial_object_labels/dataset.yaml` の絶対パスも修正します。
 
 生記録内の `preview.hdf5` は確認用の派生物だったため削除しました。上記の実学習HDF5と元画像・JSONLは保持しています。
 
@@ -31,16 +31,9 @@
 uv sync --locked --group act-official
 ```
 
-公式ACTの固定コミットと適用差分は [patches/README.md](../patches/README.md) に記録しています。外部コードがない場合のみ、次を実行します。
+変更済み公式ACT本体は `reference/act/` に同梱しています。GitHubから通常のクローンだけで取得でき、追加のクローン・サブモジュール取得・差分適用は不要です。出典、固定コミット、適用済み差分は [patches/README.md](../patches/README.md) に記録しています。ACTとDETRのライセンスも元の場所に保持しています。
 
-```bash
-git clone https://github.com/tonyzhaozh/act.git reference/act
-git -C reference/act checkout 742c753c0d4a5d87076c8f69e5628c79a8cc5488
-git -C reference/act apply --check ../../patches/act_cpu.patch
-git -C reference/act apply ../../patches/act_cpu.patch
-```
-
-適用済みの作業コピーに再適用しないでください。主な変更はCPU対応、5関節対応、データセット指定、実演長の違いへの対応です。画像モデルの学習・ネットワークは公式ACTを使用します。小型モデルは検出入力へのアダプターを使います。
+主な変更はCPU対応、5関節対応、データセット指定、実演長の違いへの対応です。画像モデルの学習・ネットワークは公式ACTを使用します。小型モデルは検出入力へのアダプターを使います。
 
 GPU側の環境は別定義です。GPUホストで `uv sync --project cloud/runpod --frozen` を実行し、ローカルCPU環境と混ぜないでください。
 
@@ -141,7 +134,7 @@ uv run --group act-official python scripts/test_image_act.py --local --query-eve
 
 ```bash
 uv run --group act-official python -m unittest discover -s tests
-git -C reference/act apply --reverse --check ../../patches/act_cpu.patch
+git apply --reverse --check --directory=reference/act patches/act_cpu.patch
 ```
 
 これらの検証は実機を動かしません。再学習はCPU／GPUやライブラリ条件により完全に同じ数値になるとは限りません。まず保存済みの重みと統計を使って再現してください。

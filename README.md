@@ -40,7 +40,9 @@ uv run --group act-official python scripts/test_image_act.py --local --query-eve
 
 公式ACTは `742c753c0d4a5d87076c8f69e5628c79a8cc5488` を使用し、変更は [差分ファイル](patches/README.md)に保存しています。
 
-大容量の `data/`・`models/`・`runs/` と外部コード `reference/` はGit管理外です。クローンだけでは学習済み実験は再現できないため、これらも別途コピーしてください。生データは再収集できない実演記録として保持しています。
+変更済みの公式ACT本体は `reference/act/` に通常のファイルとして同梱しています。追加のクローンや差分適用は不要です。
+
+大容量の `data/`・`models/`・`runs/` はGit管理外です。クローンだけでは学習済み実験は再現できないため、これらも別途コピーしてください。生データは再収集できない実演記録として保持しています。
 
 ```bash
 uv run --group act-official python -m unittest discover -s tests

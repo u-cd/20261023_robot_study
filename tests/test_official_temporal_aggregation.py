@@ -1,5 +1,6 @@
 """Compare the live adapter to the original official dense-buffer calculation."""
 import subprocess
+import shutil
 import sys
 from pathlib import Path
 import unittest
@@ -74,8 +75,13 @@ class OfficialAggregationTest(unittest.TestCase):
             self.assertEqual(trial.completed_steps,0)
 
     def test_matches_original_code_at_all_steps_including_expiration(self):
-        original=subprocess.check_output(['git','-C',str(ROOT/'reference/act'),'show',
-            '742c753c0d4a5d87076c8f69e5628c79a8cc5488:imitate_episodes.py'],text=True)
+        # Reconstruct upstream from the committed patch; no nested Git history required.
+        with tempfile.TemporaryDirectory() as folder:
+            target=Path(folder)/'imitate_episodes.py'
+            shutil.copyfile(ROOT/'reference/act/imitate_episodes.py',target)
+            subprocess.run(['git','apply','--reverse','--include=imitate_episodes.py',
+                str(ROOT/'patches/act_cpu.patch')],cwd=folder,check=True)
+            original=target.read_text()
         start=original.index('                        actions_populated = torch.all(')
         end=original.index('\n                    else:',start)
         original_body='\n'.join(line[24:] for line in original[start:end].splitlines())

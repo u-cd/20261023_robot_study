@@ -1,5 +1,7 @@
 # 公式ACTへの変更（2モデルの再現用）
 
+変更済みのACT本体は `reference/act/` に通常ファイルとして同梱している（サブモジュールではない）。クローン後の差分適用は不要。ACTとDETRのライセンスを元の場所に保持する。
+
 コード・データ・実行環境の比較と、可変長実演の扱いは [公式ACTとの差分まとめ](../docs/reproduction_ja.md) を参照。
 
 - 元リポジトリ：https://github.com/tonyzhaozh/act
@@ -26,13 +28,9 @@ git -C reference/act apply ../../patches/act_cpu.patch
 適用済みか確認する：
 
 ```bash
-git -C reference/act apply --reverse --check ../../patches/act_cpu.patch
+git apply --reverse --check --directory=reference/act patches/act_cpu.patch
 ```
 
-再生成する：
-
-```bash
-git -C reference/act diff --no-ext-diff -- detr/main.py detr/models/detr_vae.py imitate_episodes.py utils.py > patches/act_cpu.patch
-```
+差分を更新するときは、上記の元コミットを別の作業コピーへ取得し、変更済みの4ファイルをそこへコピーして `git diff` を保存する。同梱版に対する通常の `git diff` は、元コミットからの累積差分にはならない。
 
 再現手順は [docs/reproduction_ja.md](../docs/reproduction_ja.md)、実験結果は [2026-11-07の結果まとめ](../docs/act_results_2026-11-07_ja.md) を参照。

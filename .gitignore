@@ -10,7 +10,6 @@ __pycache__/
 /data/
 /models/
 /.local_history/
-/reference/
 
 # Experiment outputs and checkpoints
 /runs/
