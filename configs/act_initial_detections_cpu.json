@@ -1,0 +1,42 @@
+{
+  "dataset": "data/act_initial_detections_cpu_20261107",
+  "source_dataset": "data/act_training/demonstrations_50_20hz",
+  "detector": {
+    "weights": "models/detectors/yolov8n_sponge_coin_20261107.pt",
+    "imgsz": 640,
+    "confidence_threshold": 0.25,
+    "initial_stationary_frames": 5,
+    "aggregation": "median xyxy and confidence of per-class highest-score boxes",
+    "max_center_spread_px": 8,
+    "class_order": ["sponge", "coin"],
+    "features": ["cx/W", "cy/H", "width/W", "height/H", "confidence", "valid"]
+  },
+  "input_mode": "initial detections fixed throughout each episode; current commanded joint angles",
+  "policy": {
+    "lr": 0.00001,
+    "lr_backbone": 0.00001,
+    "num_queries": 100,
+    "kl_weight": 10,
+    "hidden_dim": 192,
+    "dim_feedforward": 768,
+    "enc_layers": 4,
+    "dec_layers": 7,
+    "nheads": 3,
+    "camera_names": ["top"],
+    "backbone": "resnet18",
+    "device": "cpu",
+    "state_dim": 5
+  },
+  "training": {
+    "epochs": 5000,
+    "batch_size": 8,
+    "seed": 0,
+    "cpu_threads": 2,
+    "interop_threads": 1,
+    "num_workers": 0,
+    "weight_decay": 0.0001,
+    "normalization": "all 50 episodes as upstream",
+    "hz": 20,
+    "action_offset": 0
+  }
+}

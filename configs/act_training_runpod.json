@@ -1,0 +1,65 @@
+{
+  "status": "reference_configuration_training_completed_20261107",
+  "upstream_repository": "https://github.com/tonyzhaozh/act",
+  "upstream_commit": "742c753c0d4a5d87076c8f69e5628c79a8cc5488",
+  "patch": "patches/act_cpu.patch",
+  "entrypoint": "reference/act/imitate_episodes.py",
+  "arguments": {
+    "device": "cuda",
+    "cpu_threads": 2,
+    "state_dim": 5,
+    "dataset_dir": "data/act_training/demonstrations_50_20hz",
+    "num_episodes": 50,
+    "ckpt_dir": "runs/act_50_20hz_seed0",
+    "policy_class": "ACT",
+    "task_name": "adeept_sponge",
+    "batch_size": 8,
+    "seed": 0,
+    "num_epochs": 5000,
+    "lr": 1e-05,
+    "kl_weight": 10,
+    "chunk_size": 100,
+    "hidden_dim": 512,
+    "dim_feedforward": 3200
+  },
+  "data": {
+    "recording_hz": 20,
+    "resampled_hz": 20,
+    "split_seed": 1,
+    "train_episodes": 40,
+    "validation_episodes": 10,
+    "camera": "top",
+    "image_size": [
+      640,
+      480
+    ],
+    "joint_order": [
+      "base",
+      "shoulder",
+      "elbow",
+      "wrist",
+      "gripper"
+    ],
+    "angle_units": "radians_all_five",
+    "angle_source": "commanded_not_measured",
+    "target": "next_grid_commanded_position",
+    "action_offset": 0,
+    "pause_removal": false,
+    "time_warping": false,
+    "normalization_episodes": "all_50_as_upstream"
+  },
+  "model_defaults": {
+    "backbone": "resnet18_imagenet",
+    "enc_layers": 4,
+    "dec_layers": 7,
+    "nheads": 8,
+    "latent_dim": 32,
+    "dropout": 0.1,
+    "optimizer": "AdamW",
+    "weight_decay": 0.0001,
+    "lr_backbone": 1e-05,
+    "precision": "float32",
+    "amp": false
+  },
+  "note": "Completed image-ACT experiment configuration. Reproduction uses the official entrypoint; see docs/reproduction_ja.md."
+}

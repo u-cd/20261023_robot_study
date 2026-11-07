@@ -1,7 +1,7 @@
 [project]
 name = "robot-study"
 version = "0.1.0"
-description = "ACT imitation-learning experiments and MLP comparison on an Adeept robot arm"
+description = "Reproduce detection-input and image-input ACT on an Adeept robot arm"
 readme = "README.md"
 requires-python = ">=3.12,<3.13"
 dependencies = [
@@ -26,3 +26,11 @@ torchvision = { index = "pytorch-cpu" }
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
+
+[dependency-groups]
+act-official = [
+    "einops>=0.8.2",
+    "h5py>=3.16.0",
+    "ipython>=9.18.1",
+    "tqdm>=4.70.1",
+]

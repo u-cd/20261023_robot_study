@@ -1,0 +1,67 @@
+<section>
+<h2>実演の記録</h2>
+<p>開始姿勢：台座70°・肩113°・肘43°・手首80°・グリッパー90°。この画面の関節操作を使ってください。</p>
+<div style="display:flex;gap:20px;flex-wrap:wrap;align-items:flex-start">
+<img id="demo-camera" width="640" height="480" style="max-width:100%;height:auto;background:#ddd" alt="Webカメラ映像">
+<div><div class="row"><button id="demo-start" class="primary">記録開始</button><button id="demo-save">成功して保存</button><button id="demo-discard">中断・破棄</button></div>
+<div class="row" style="margin-top:12px"><button id="demo-home">開始姿勢へ戻す</button><button id="demo-home-stop" class="stop" disabled>復帰を停止・保持</button></div>
+<p class="muted">戻す順：肩 → 肘 → 台座 → 手首 → グリッパー。1関節ずつ、設定速度を上限に移動します。周囲に物やケーブルがないことを確認してください。</p>
+<p id="demo-home-state" role="status"></p>
+<p id="demo-state" role="status">記録状況を取得中…</p>
+<p class="muted">画像と指令角度を目標__HZ__Hzで記録します。保存後に実周期と重複フレームを表示します。<br>実測角度ではありません。保存時は移動を停止し、保持を継続します。</p>
+<pre id="demo-summary" style="white-space:pre-wrap"></pre></div>
+</div>
+</section>
+<script>
+window.addEventListener('DOMContentLoaded',()=>{
+ const byId=id=>document.getElementById(id);
+ let working=false,returning=false;
+ async function poll(){
+  try{
+   const response=await fetch('/record/status');const data=await response.json();
+   byId('demo-state').textContent=data.error?'記録エラー：'+data.error:data.recording?`記録中：${data.samples}サンプル`:'記録停止中';
+   const wasReturning=returning;returning=!!data.home?.active;
+   if(returning){busy=true;}
+   else if(wasReturning){busy=false;}
+   if(data.home?.state&&(returning||wasReturning)){
+    connected=data.home.state.connected;joints=data.home.state.joints;
+   }
+   if(returning||wasReturning)render();
+   byId('demo-home-state').textContent=data.home?.message||'';
+   byId('demo-home').disabled=working||!!data.folder||returning;
+   byId('demo-home-stop').disabled=!returning;
+   byId('demo-start').disabled=working||!!data.folder||returning;
+   byId('demo-save').disabled=working||!data.folder||!!data.error;
+   byId('demo-discard').disabled=working||!data.folder;
+  }catch(e){byId('demo-state').textContent=e.message;}
+ }
+ async function recordAction(action){
+  working=true;await poll();
+  try{
+   const response=await fetch('/record',{method:'POST',headers:{'Content-Type':'application/json','X-Arm-Token':'__TOKEN__'},body:JSON.stringify({action})});
+   const data=await response.json();if(!response.ok)throw Error(data.error);
+   if(action==='start')byId('demo-summary').textContent='スポンジをつかみ、coinへ運び、離して退避したら「成功して保存」を押してください。';
+   else if(data.discarded)byId('demo-summary').textContent='試行を破棄しました。'+(data.stop_warning?'\n'+data.stop_warning:'');
+   else byId('demo-summary').textContent=`保存先：${data.folder}\nサンプル：${data.samples}\n時間：${data.duration_s.toFixed(2)}秒\n平均周期：${data.mean_interval_ms.toFixed(1)}ms\n最大周期：${data.max_interval_ms.toFixed(1)}ms\n画像：${data.unique_frames}枚（再使用${data.reused_frames}回）\n飛んだ記録周期：${data.skipped_ticks}\nviewer.htmlで画像と角度を確認できます。`;
+  }catch(e){byId('demo-summary').textContent=e.message;}
+  finally{working=false;await poll();}
+ }
+ async function home(action){
+  if(action==='start'){cancelHold(false);await chain;busy=true;render();}
+  working=true;
+  try{
+   const response=await fetch('/home',{method:'POST',headers:{'Content-Type':'application/json','X-Arm-Token':'__TOKEN__'},body:JSON.stringify({action})});
+   const data=await response.json();if(!response.ok)throw Error(data.error);
+   byId('demo-home-state').textContent=data.message;
+  }catch(e){byId('demo-summary').textContent=e.message;}
+  finally{working=false;await poll();if(!returning){busy=false;render();}}
+ }
+ byId('demo-home').onclick=()=>home('start');
+ byId('demo-home-stop').onclick=()=>home('stop');
+ for(const [id,action] of [['demo-start','start'],['demo-save','save'],['demo-discard','discard']])byId(id).onclick=()=>recordAction(action);
+ const camera=byId('demo-camera');
+ const nextFrame=()=>{camera.src='/live.jpg?t='+Date.now();};
+ camera.onload=()=>setTimeout(nextFrame,100);camera.onerror=()=>setTimeout(nextFrame,1000);nextFrame();
+ setInterval(poll,1000);poll();
+});
+</script>

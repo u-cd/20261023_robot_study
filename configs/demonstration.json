@@ -1,0 +1,20 @@
+{
+  "joint_order": [
+    "base",
+    "shoulder",
+    "elbow",
+    "wrist",
+    "gripper"
+  ],
+  "initial_angles_deg": [
+    70,
+    113,
+    43,
+    80,
+    90
+  ],
+  "angle_source": "commanded",
+  "confirmed_by_user_on": "2026-11-05",
+  "recording_hz": 20,
+  "recording_hz_reason": "STATUS roundtrip measured 33.9-36.1 ms on 2026-11-05; 50 Hz not sustainable with current serial protocol"
+}

@@ -12,13 +12,8 @@ __pycache__/
 /.local_history/
 /reference/
 
-# Experiment outputs; retain only the small existing MLP baseline
-/runs/*
-!/runs/imitation_bc/
-/runs/imitation_bc/*
-!/runs/imitation_bc/policy.pt
-!/runs/imitation_bc/report.json
-!/runs/imitation_bc/evaluation.png
+# Experiment outputs and checkpoints
+/runs/
 
 *.HEIC
 *.heic

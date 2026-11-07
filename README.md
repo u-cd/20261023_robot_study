@@ -1,66 +1,47 @@
-# 自作ロボットアームでACTを学習・評価する
+# 2つのACTでスポンジ搬送を再現する
 
-Adeept ADA031 V4.0と固定Webカメラを使い、人が実演したスポンジ搬送をACTで学習するプロジェクトです。ACTの実行を確認し、同じ実演データを使うMLPなどと比較して、結果をレポートにまとめることを目指します。
+Adeeptの5関節アームで、スポンジをcoinへ運ぶ実験です。2026年11月7日時点の2モデルの再現に必要なコード・設定・記録を残しています。
 
-現在は成功27試行の生記録があり、小型ACTのオフライン学習・保存・再読込・保存画像での推論まで確認しています。原論文の完全再現ではなく、ACTによる実機搬送は未確認です。既存MLPと今回の小型ACTは入出力が異なるため、まだ公平な比較にはなっていません。
+| モデル | 入力 | 実機での到達点 |
+| --- | --- | --- |
+| 小型ACT | 初期YOLOv8n検出値＋関節の指令角度 | 把持まで進まず停止。制御方法の違いも含めて要検証 |
+| 画像ACT | カメラ画像＋関節の指令角度 | coin付近で手動補助を入れると搬送完了。ローカルCPUでも動作 |
 
-## 学習と推論
+- [2026-11-07の結果](docs/act_results_2026-11-07_ja.md)
+- [データ・学習・推論の再現手順](docs/reproduction_ja.md)
+- [今後の実験計画とメモ](experiment_plan_ja.md)
 
-Python 3.12とuvを使います。現在の構成はCPU版PyTorchです。
-
-```bash
-uv sync --locked
-uv run python vision/act_smoke.py --steps 200
-```
-
-学習にはローカルの `data/imitation/` と `models/resnet18-f37072fd.pth` が必要です。生データや重みはGitには含めません。ResNet重みの準備方法と制約は [ACTの実験結果](docs/act_smoke_test_ja.md) を参照してください。
-
-保存した小型ACTを、記録済み画像で試す：
+## 環境と実機テスト
 
 ```bash
-uv run python vision/infer_act_smoke.py \
-  --episode 20261031T013236_735561Z --index 2
+uv sync --locked --group act-official
+uv run --group act-official python scripts/test_image_act.py --local --query-every 20
 ```
 
-これらのコマンドは実機を動かしません。出力は `runs/act_smoke/` です。
+画面は http://127.0.0.1:8767 です。既にサーバーが動作中なら、その画面を使います。現在姿勢に合う角度で接続し、画面から開始姿勢へ戻します。収集時の開始角度は台座70°、肩113°、肘43°、手首80°、グリッパー90°です。
 
-## 手動操作・実演収集
+`--query-every 20` は制御20ステップごとの推論です。学習時の1秒分に相当し、実時間で厳密に1秒間隔となる指定ではありません。
 
-ターミナル1：
+## 構成
+
+| 場所 | 内容 |
+| --- | --- |
+| `arm_controller.ino` | 共通のArduinoファームウェア |
+| `scripts/` | 操作・収集・変換・検出器学習・2モデルの学習／実機試験 |
+| `configs/` | カメラ・開始姿勢・2モデルの学習設定 |
+| `reference/act/` | 公式ACTの固定コミット |
+| `patches/` | 公式コードへの差分・適用手順 |
+| `cloud/runpod/` | GPU学習のCUDA環境定義 |
+| `data/` | 50実演の生記録、HDF5、アノテーション、検出値データ |
+| `models/` | 学習済み画像ACT、検出器、事前学習重み |
+| `runs/` | 小型ACTの重み、評価・実機試験・整理記録 |
+| `tests/` | データ処理・制御の検証 |
+| `docs/` | 再現手順・結果・実機の注意点 |
+
+公式ACTは `742c753c0d4a5d87076c8f69e5628c79a8cc5488` を使用し、変更は [差分ファイル](patches/README.md)に保存しています。
+
+大容量の `data/`・`models/`・`runs/` と外部コード `reference/` はGit管理外です。クローンだけでは学習済み実験は再現できないため、これらも別途コピーしてください。生データは再収集できない実演記録として保持しています。
 
 ```bash
-uv run python control/arm_panel.py
+uv run --group act-official python -m unittest discover -s tests
 ```
-
-ターミナル2：
-
-```bash
-uv run python vision/arm_camera_panel.py
-```
-
-ブラウザで <http://127.0.0.1:8766> を開きます。カメラは `configs/camera.json` で指定します。紙面校正は不要です。検出枠も表示したい場合は、2つ目のコマンドに `--detections` を付けます（ローカルのYOLO重みが必要）。終了は各ターミナルでCtrl+Cです。
-
-接続・有効化は画面から行います。接続時の基板リセットで保持が解除されるため、先にアームを支持してください。角度は実測値ではなく指令値です。
-
-**人が実際に行った操作と元画像を十分に保存し、工程別・関節別の学習データは後処理で作ります。生記録を現在の工程設計に合わせて上書きしません。** 成功記録は `data/imitation/` にローカル保存し、Git管理外にします。現行仕様では失敗・中断した試行は破棄します。
-
-## 構成と資料
-
-- `firmware/arm_controller/`：手動操作・実演収集・モデルからの制御で共用するArduinoファームウェア。
-- `control/`：通信、手動操作、実演記録、旧MLPの予測。
-- `vision/`：カメラ、任意のライブ検出、MLPと小型ACTの学習・推論。
-- `tests/`：偽デバイスを使う収集確認とモデルのテスト。
-- `study_notes/`：[論文・翻訳・ユーザーの勉強メモ](study_notes/README.md)。
-- [今後の実験計画](experiment_plan_ja.md)
-- [環境構築・コマンド](docs/uv_setup_ja.md)
-- [実機の操作・制約](docs/hardware_observations_ja.md)
-- [実演収集](docs/imitation_data_collection_ja.md)
-- [保存形式](docs/imitation_record_format_ja.md)
-- [小型ACTの実験結果](docs/act_smoke_test_ja.md)
-- [既存MLPの評価](docs/imitation_first_evaluation_ja.md)
-
-```bash
-uv run python -m unittest discover -s tests
-```
-
-旧校正・幾何搬送・検出モデル比較・MLP補助ルールは現役コードから削除しました。過去の写真・動画・測定結果は `.local_history/cleanup_20261105/` にローカル保管しています。この履歴、`data/`、`models/`、`runs/` はGitに追加しません。Git履歴の書き換えは行っていません。
