@@ -9,13 +9,16 @@ from torch import nn
 from torch.nn import functional as F
 from torch.utils.data import Dataset
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
+OFFICIAL = ROOT / '.build/initial_detection_act/act'
 
 
 def configure_official(output, epochs):
     os.environ.update(TORCH_HOME=str(ROOT / 'models/torch'), MPLBACKEND='Agg',
                       MPLCONFIGDIR='/tmp/act-initial-detection-mpl')
-    sys.path[:0] = [str(ROOT / 'reference/act'), str(ROOT / 'reference/act/detr')]
+    if not (OFFICIAL / 'policy.py').is_file():
+        raise RuntimeError('小型ACT用の公式コードの別コピーを準備してください。experiments/initial_detection_act/README.md を参照。')
+    sys.path[:0] = [str(OFFICIAL), str(OFFICIAL / 'detr')]
     # Upstream model factory parses the entrypoint's argv before applying overrides.
     sys.argv = ['detection-act', '--ckpt_dir', str(output), '--policy_class', 'ACT',
                 '--task_name', 'adeept_sponge', '--seed', '0', '--num_epochs', str(epochs),
@@ -55,7 +58,7 @@ class DetectionACTPolicy(nn.Module):
     def __init__(self, config):
         super().__init__()
         from policy import ACTPolicy
-        from act_detection_adapter import DetectionACT
+        from initial_detection_adapter import DetectionACT
         original = ACTPolicy(config)
         self.adapter = DetectionACT(original.model)
         self.kl_weight = config['kl_weight']

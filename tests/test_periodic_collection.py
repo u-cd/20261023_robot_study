@@ -8,7 +8,7 @@ import cv2
 import h5py
 import numpy as np
 
-from scripts.collect_demonstrations import Recorder, export_hdf5, validate_initial
+from ui.collect import Recorder, export_hdf5, validate_initial
 
 
 CONFIG={'initial_angles_deg':[70,113,43,80,90]}

@@ -14,7 +14,7 @@ os.environ['OMP_NUM_THREADS']='2'
 import torch
 
 sys.stdout.reconfigure(line_buffering=True)
-ROOT=Path(__file__).resolve().parents[1]
+ROOT=Path(__file__).resolve().parents[2]
 
 
 def main():

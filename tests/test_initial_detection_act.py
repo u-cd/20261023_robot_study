@@ -8,8 +8,8 @@ import numpy as np
 import torch
 
 ROOT = Path(__file__).resolve().parents[1]
-sys.path.insert(0, str(ROOT/'scripts'))
-from detection_act import InitialDetectionDataset
+sys.path.insert(0, str(ROOT/'experiments/initial_detection_act'))
+from initial_detection_policy import InitialDetectionDataset
 
 
 @unittest.skipUnless((ROOT/'data/act_initial_detections_cpu_20261107/manifest.json').exists(),

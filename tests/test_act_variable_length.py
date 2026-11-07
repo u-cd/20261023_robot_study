@@ -9,9 +9,7 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-spec = importlib.util.spec_from_file_location('act_utils', Path('reference/act/utils.py'))
-utils = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(utils)
+from act import utils
 
 
 class VariableLengthTests(unittest.TestCase):

@@ -12,7 +12,7 @@ import numpy as np
 import torch
 from ultralytics import YOLO
 
-ROOT=Path(__file__).resolve().parents[1]
+ROOT=Path(__file__).resolve().parents[2]
 
 
 def box_iou(a,b):
@@ -38,7 +38,7 @@ def stationary_frames(raw, limit):
 
 def main():
     p=argparse.ArgumentParser(description=__doc__)
-    p.add_argument('--config',type=Path,default=ROOT/'configs/act_initial_detections_cpu.json')
+    p.add_argument('--config',type=Path,default=Path(__file__).with_name('config.json'))
     args=p.parse_args();cfg=json.loads(args.config.read_text());out=ROOT/cfg['dataset']
     if out.exists():raise SystemExit('Choose a new output dataset; refusing overwrite.')
     out.mkdir(parents=True);(out/'review').mkdir()

@@ -6,7 +6,7 @@ from unittest.mock import patch
 
 import h5py
 import numpy as np
-from scripts.prepare_act_dataset import resample
+from prepare import resample
 
 
 def rows():
@@ -34,7 +34,7 @@ class ConversionTests(unittest.TestCase):
         with self.assertRaises(ValueError):resample(r,20)
 
     def test_official_legacy_and_aligned_offsets(self):
-        spec=importlib.util.spec_from_file_location('official_utils',Path('reference/act/utils.py'))
+        spec=importlib.util.spec_from_file_location('official_utils',Path('act/utils.py'))
         module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
         with tempfile.TemporaryDirectory() as tmp:
             path=Path(tmp)/'episode_0.hdf5'

@@ -1,26 +1,33 @@
 {
-  "status": "reference_configuration_training_completed_20261107",
   "upstream_repository": "https://github.com/tonyzhaozh/act",
   "upstream_commit": "742c753c0d4a5d87076c8f69e5628c79a8cc5488",
-  "patch": "patches/act_cpu.patch",
-  "entrypoint": "reference/act/imitate_episodes.py",
-  "arguments": {
+  "patch": "act/official.patch",
+  "policy": {
+    "lr": 1e-05,
+    "lr_backbone": 1e-05,
+    "num_queries": 100,
+    "kl_weight": 10,
+    "hidden_dim": 512,
+    "dim_feedforward": 3200,
+    "enc_layers": 4,
+    "dec_layers": 7,
+    "nheads": 8,
+    "camera_names": [
+      "top"
+    ],
+    "backbone": "resnet18",
+    "state_dim": 5,
+    "dropout": 0.1,
+    "weight_decay": 0.0001
+  },
+  "training": {
     "device": "cuda",
     "cpu_threads": 2,
-    "state_dim": 5,
     "dataset_dir": "data/act_training/demonstrations_50_20hz",
     "num_episodes": 50,
-    "ckpt_dir": "runs/act_50_20hz_seed0",
-    "policy_class": "ACT",
-    "task_name": "adeept_sponge",
     "batch_size": 8,
     "seed": 0,
-    "num_epochs": 5000,
-    "lr": 1e-05,
-    "kl_weight": 10,
-    "chunk_size": 100,
-    "hidden_dim": 512,
-    "dim_feedforward": 3200
+    "num_epochs": 5000
   },
   "data": {
     "recording_hz": 20,
@@ -48,18 +55,10 @@
     "time_warping": false,
     "normalization_episodes": "all_50_as_upstream"
   },
-  "model_defaults": {
-    "backbone": "resnet18_imagenet",
-    "enc_layers": 4,
-    "dec_layers": 7,
-    "nheads": 8,
+  "implementation": {
     "latent_dim": 32,
-    "dropout": 0.1,
-    "optimizer": "AdamW",
-    "weight_decay": 0.0001,
-    "lr_backbone": 1e-05,
     "precision": "float32",
-    "amp": false
-  },
-  "note": "Completed image-ACT experiment configuration. Reproduction uses the official entrypoint; see docs/reproduction_ja.md."
+    "amp": false,
+    "note": "Latent dimension is fixed in official DETRVAE; it is not a configurable model parameter here."
+  }
 }

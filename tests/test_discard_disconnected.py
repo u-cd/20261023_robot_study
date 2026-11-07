@@ -1,6 +1,6 @@
 import unittest
 from unittest.mock import Mock
-from scripts.collect_demonstrations import finish_recording
+from ui.collect import finish_recording
 
 class DiscardTests(unittest.TestCase):
     def test_disconnected_discard_still_finishes(self):

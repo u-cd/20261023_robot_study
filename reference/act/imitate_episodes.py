@@ -3,9 +3,6 @@ import numpy as np
 import os
 import pickle
 import argparse
-import h5py
-import json
-import time
 import matplotlib.pyplot as plt
 from copy import deepcopy
 from tqdm import tqdm
@@ -19,13 +16,13 @@ from utils import compute_dict_mean, set_seed, detach_dict # helper functions
 from policy import ACTPolicy, CNNMLPPolicy
 from visualize_episodes import save_videos
 
+from sim_env import BOX_POSE
 
 import IPython
 e = IPython.embed
 
 def main(args):
     set_seed(1)
-    torch.set_num_threads(args['cpu_threads'])
     # command line parameters
     is_eval = args['eval']
     ckpt_dir = args['ckpt_dir']
@@ -38,34 +35,19 @@ def main(args):
 
     # get task parameters
     is_sim = task_name[:4] == 'sim_'
-    if task_name == 'adeept_sponge':
-        if is_eval:
-            raise ValueError('Adeept hardware rollout adapter is not implemented; --eval is unavailable for this task.')
-        if args['dataset_dir'] is None or args['num_episodes'] is None:
-            raise ValueError('adeept_sponge requires --dataset_dir and --num_episodes')
-        with h5py.File(os.path.join(args['dataset_dir'], 'episode_0.hdf5'), 'r') as f:
-            if f['observations/qpos'].shape[1] != args['state_dim']:
-                raise ValueError('Dataset joint dimension does not match --state_dim')
-            task_config = dict(dataset_dir=args['dataset_dir'], num_episodes=args['num_episodes'],
-                               episode_len=f['action'].shape[0], camera_names=list(f['observations/images']))
-    elif is_sim:
+    if is_sim:
         from constants import SIM_TASK_CONFIGS
         task_config = SIM_TASK_CONFIGS[task_name]
     else:
         from aloha_scripts.constants import TASK_CONFIGS
         task_config = TASK_CONFIGS[task_name]
-    task_config = dict(task_config)
-    if args['dataset_dir'] is not None:
-        task_config['dataset_dir'] = args['dataset_dir']
-    if args['num_episodes'] is not None:
-        task_config['num_episodes'] = args['num_episodes']
     dataset_dir = task_config['dataset_dir']
     num_episodes = task_config['num_episodes']
     episode_len = task_config['episode_len']
     camera_names = task_config['camera_names']
 
     # fixed parameters
-    state_dim = args['state_dim']
+    state_dim = 14
     lr_backbone = 1e-5
     backbone = 'resnet18'
     if policy_class == 'ACT':
@@ -90,12 +72,7 @@ def main(args):
     else:
         raise NotImplementedError
 
-    policy_config['device'] = args['device']
-    policy_config['state_dim'] = state_dim
-
     config = {
-        'device': args['device'],
-        'num_rollouts': args['num_rollouts'],
         'num_epochs': num_epochs,
         'ckpt_dir': ckpt_dir,
         'episode_len': episode_len,
@@ -111,10 +88,6 @@ def main(args):
         'real_robot': not is_sim
     }
 
-    if args['offline_check']:
-        offline_check(config, dataset_dir)
-        return
-
     if is_eval:
         ckpt_names = [f'policy_best.ckpt']
         results = []
@@ -127,7 +100,7 @@ def main(args):
         print()
         exit()
 
-    train_dataloader, val_dataloader, stats, _ = load_data(dataset_dir, num_episodes, camera_names, batch_size_train, batch_size_val, single_episode_check=args['single_episode_check'], action_chunk_size=args['chunk_size'] if policy_class == 'ACT' else None)
+    train_dataloader, val_dataloader, stats, _ = load_data(dataset_dir, num_episodes, camera_names, batch_size_train, batch_size_val)
 
     # save dataset stats
     if not os.path.isdir(ckpt_dir):
@@ -143,62 +116,6 @@ def main(args):
     ckpt_path = os.path.join(ckpt_dir, f'policy_best.ckpt')
     torch.save(best_state_dict, ckpt_path)
     print(f'Best ckpt, val loss {min_val_loss:.6f} @ epoch{best_epoch}')
-
-
-def offline_check(config, dataset_dir):
-    """Read one recorded observation and infer only; no environment or robot I/O."""
-    from utils import EpisodicDataset
-    with open(os.path.join(config['ckpt_dir'], 'dataset_stats.pkl'), 'rb') as f:
-        stats = pickle.load(f)
-    dataset = EpisodicDataset([0], dataset_dir, config['camera_names'], stats)
-    np.random.seed(42)
-    rng = np.random.get_state()
-    with h5py.File(os.path.join(dataset_dir, 'episode_0.hdf5'), 'r') as f:
-        start = int(np.random.choice(f['action'].shape[0]))
-        dt = float(f.attrs['dt'])
-    np.random.set_state(rng)
-    image, qpos, target, is_pad = dataset[0]
-    policy = make_policy(config['policy_class'], config['policy_config'])
-    path = os.path.join(config['ckpt_dir'], 'policy_last.ckpt')
-    policy.load_state_dict(torch.load(path, map_location=config['device'], weights_only=True))
-    policy.to(config['device']).eval()
-    image, qpos = image[None].to(config['device']), qpos[None].to(config['device'])
-    with torch.inference_mode():
-        policy(qpos, image) # warm-up
-        if config['device'] == 'cuda':
-            torch.cuda.synchronize()
-        timings = []
-        for _ in range(5):
-            before = time.perf_counter()
-            prediction = policy(qpos, image)
-            if config['device'] == 'cuda':
-                torch.cuda.synchronize()
-            timings.append((time.perf_counter()-before)*1000)
-    prediction = prediction[0].cpu().numpy()
-    if not np.isfinite(prediction).all():
-        raise ValueError('Nonfinite policy prediction')
-    actions = prediction * stats['action_std'] + stats['action_mean']
-    targets = target[:len(actions)].numpy() * stats['action_std'] + stats['action_mean']
-    valid = ~is_pad[:len(actions)].numpy()
-    np.savez(os.path.join(config['ckpt_dir'], 'offline_prediction.npz'),
-             prediction=actions, target=targets, valid=valid)
-    report = dict(checkpoint=path, sample_start_index=start, dt=dt,
-                  prediction_shape=list(prediction.shape), all_finite=True,
-                  forward_ms=timings, mean_forward_ms=float(np.mean(timings)),
-                  same_demonstration_as_training=True, robot_moved=False)
-    with open(os.path.join(config['ckpt_dir'], 'offline_check.json'), 'w') as f:
-        json.dump(report, f, indent=2)
-    fig, axes = plt.subplots(config['state_dim'], 1, figsize=(9, 10), sharex=True)
-    for j, ax in enumerate(np.atleast_1d(axes)):
-        ax.plot(np.arange(len(actions))[valid]*dt, np.rad2deg(targets[valid,j]), label='demonstration')
-        ax.plot(np.arange(len(actions))*dt, np.rad2deg(actions[:,j]), label='prediction')
-        ax.set_ylabel(f'joint {j+1} (deg)')
-    np.atleast_1d(axes)[0].legend()
-    np.atleast_1d(axes)[-1].set_xlabel('future time (s)')
-    fig.tight_layout()
-    fig.savefig(os.path.join(config['ckpt_dir'], 'offline_prediction.png'))
-    plt.close(fig)
-    print(json.dumps(report, indent=2))
 
 
 def make_policy(policy_class, policy_config):
@@ -221,31 +138,18 @@ def make_optimizer(policy_class, policy):
     return optimizer
 
 
-def get_image(ts, camera_names, device):
+def get_image(ts, camera_names):
     curr_images = []
     for cam_name in camera_names:
         curr_image = rearrange(ts.observation['images'][cam_name], 'h w c -> c h w')
         curr_images.append(curr_image)
     curr_image = np.stack(curr_images, axis=0)
-    curr_image = torch.from_numpy(curr_image / 255.0).float().to(device).unsqueeze(0)
+    curr_image = torch.from_numpy(curr_image / 255.0).float().cuda().unsqueeze(0)
     return curr_image
-
-
-def temporal_aggregate(actions_for_curr_step, device):
-    """Original eval_bc temporal ensemble, shared with the Adeept hardware adapter."""
-    actions_populated = torch.all(actions_for_curr_step != 0, axis=1)
-    actions_for_curr_step = actions_for_curr_step[actions_populated]
-    k = 0.01
-    exp_weights = np.exp(-k * np.arange(len(actions_for_curr_step)))
-    exp_weights = exp_weights / exp_weights.sum()
-    exp_weights = torch.from_numpy(exp_weights).to(device).unsqueeze(dim=1)
-    raw_action = (actions_for_curr_step * exp_weights).sum(dim=0, keepdim=True)
-    return raw_action
 
 
 def eval_bc(config, ckpt_name, save_episode=True):
     set_seed(1000)
-    device = config['device']
     ckpt_dir = config['ckpt_dir']
     state_dim = config['state_dim']
     real_robot = config['real_robot']
@@ -261,9 +165,9 @@ def eval_bc(config, ckpt_name, save_episode=True):
     # load policy and stats
     ckpt_path = os.path.join(ckpt_dir, ckpt_name)
     policy = make_policy(policy_class, policy_config)
-    loading_status = policy.load_state_dict(torch.load(ckpt_path, map_location=device, weights_only=True))
+    loading_status = policy.load_state_dict(torch.load(ckpt_path))
     print(loading_status)
-    policy.to(config['device'])
+    policy.cuda()
     policy.eval()
     print(f'Loaded: {ckpt_path}')
     stats_path = os.path.join(ckpt_dir, f'dataset_stats.pkl')
@@ -280,7 +184,7 @@ def eval_bc(config, ckpt_name, save_episode=True):
         env = make_real_env(init_node=True)
         env_max_reward = 0
     else:
-        from sim_env import make_sim_env, BOX_POSE
+        from sim_env import make_sim_env
         env = make_sim_env(task_name)
         env_max_reward = env.task.max_reward
 
@@ -291,7 +195,7 @@ def eval_bc(config, ckpt_name, save_episode=True):
 
     max_timesteps = int(max_timesteps * 1) # may increase for real-world tasks
 
-    num_rollouts = config['num_rollouts']
+    num_rollouts = 50
     episode_returns = []
     highest_rewards = []
     for rollout_id in range(num_rollouts):
@@ -312,9 +216,9 @@ def eval_bc(config, ckpt_name, save_episode=True):
 
         ### evaluation loop
         if temporal_agg:
-            all_time_actions = torch.zeros([max_timesteps, max_timesteps+num_queries, state_dim]).to(device)
+            all_time_actions = torch.zeros([max_timesteps, max_timesteps+num_queries, state_dim]).cuda()
 
-        qpos_history = torch.zeros((1, max_timesteps, state_dim)).to(device)
+        qpos_history = torch.zeros((1, max_timesteps, state_dim)).cuda()
         image_list = [] # for visualization
         qpos_list = []
         target_qpos_list = []
@@ -335,9 +239,9 @@ def eval_bc(config, ckpt_name, save_episode=True):
                     image_list.append({'main': obs['image']})
                 qpos_numpy = np.array(obs['qpos'])
                 qpos = pre_process(qpos_numpy)
-                qpos = torch.from_numpy(qpos).float().to(device).unsqueeze(0)
+                qpos = torch.from_numpy(qpos).float().cuda().unsqueeze(0)
                 qpos_history[:, t] = qpos
-                curr_image = get_image(ts, camera_names, device)
+                curr_image = get_image(ts, camera_names)
 
                 ### query policy
                 if config['policy_class'] == "ACT":
@@ -346,7 +250,13 @@ def eval_bc(config, ckpt_name, save_episode=True):
                     if temporal_agg:
                         all_time_actions[[t], t:t+num_queries] = all_actions
                         actions_for_curr_step = all_time_actions[:, t]
-                        raw_action = temporal_aggregate(actions_for_curr_step, device)
+                        actions_populated = torch.all(actions_for_curr_step != 0, axis=1)
+                        actions_for_curr_step = actions_for_curr_step[actions_populated]
+                        k = 0.01
+                        exp_weights = np.exp(-k * np.arange(len(actions_for_curr_step)))
+                        exp_weights = exp_weights / exp_weights.sum()
+                        exp_weights = torch.from_numpy(exp_weights).cuda().unsqueeze(dim=1)
+                        raw_action = (actions_for_curr_step * exp_weights).sum(dim=0, keepdim=True)
                     else:
                         raw_action = all_actions[:, t % query_frequency]
                 elif config['policy_class'] == "CNNMLP":
@@ -405,8 +315,7 @@ def eval_bc(config, ckpt_name, save_episode=True):
 
 def forward_pass(data, policy):
     image_data, qpos_data, action_data, is_pad = data
-    device = next(policy.parameters()).device
-    image_data, qpos_data, action_data, is_pad = image_data.to(device), qpos_data.to(device), action_data.to(device), is_pad.to(device)
+    image_data, qpos_data, action_data, is_pad = image_data.cuda(), qpos_data.cuda(), action_data.cuda(), is_pad.cuda()
     return policy(qpos_data, image_data, action_data, is_pad) # TODO remove None
 
 
@@ -420,7 +329,7 @@ def train_bc(train_dataloader, val_dataloader, config):
     set_seed(seed)
 
     policy = make_policy(policy_class, policy_config)
-    policy.to(config['device'])
+    policy.cuda()
     optimizer = make_optimizer(policy_class, policy)
 
     train_history = []
@@ -523,13 +432,4 @@ if __name__ == '__main__':
     parser.add_argument('--dim_feedforward', action='store', type=int, help='dim_feedforward', required=False)
     parser.add_argument('--temporal_agg', action='store_true')
     
-    parser.add_argument('--offline_check', action='store_true')
-    parser.add_argument('--state_dim', type=int, default=14)
-    parser.add_argument('--single_episode_check', action='store_true')
-    parser.add_argument('--device', choices=['cpu', 'cuda'], default='cuda')
-    parser.add_argument('--dataset_dir', type=str)
-    parser.add_argument('--num_episodes', type=int)
-    parser.add_argument('--cpu_threads', type=int, default=2)
-    parser.add_argument('--num_rollouts', type=int, default=50)
-
     main(vars(parser.parse_args()))

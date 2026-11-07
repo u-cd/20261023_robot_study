@@ -18,7 +18,7 @@ import torch
 from ultralytics import YOLO
 
 from arm_panel import ArmConnection
-from detection_act import ROOT, load_inference_bundle
+from initial_detection_policy import ROOT, load_inference_bundle
 from fine_step import fine_step
 from return_to_initial import ReturnToInitial
 
@@ -340,7 +340,7 @@ def serve_trial(trial, http_port, enable_angles=None, page_override=None):
 
 def main():
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--bundle',type=Path,default=ROOT/'runs/act_initial_detections_cpu_20261107/inference_bundle.pt')
+    parser.add_argument('--bundle',type=Path,default=ROOT/'runs/training/initial_detection_act_20261107/inference_bundle.pt')
     parser.add_argument('--port',default='/dev/ttyUSB0');parser.add_argument('--http-port',type=int,default=8767)
     parser.add_argument('--enable-angles',type=int,nargs=5,help='Known current commanded pose for manual re-enabling after restart')
     args=parser.parse_args()

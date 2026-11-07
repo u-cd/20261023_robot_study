@@ -1,6 +1,6 @@
 import threading
 import unittest
-from scripts.return_to_initial import ReturnToInitial
+from ui.arm import ReturnToInitial
 
 
 class FakeArm:

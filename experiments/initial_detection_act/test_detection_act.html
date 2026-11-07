@@ -1,6 +1,6 @@
-<!doctype html><html lang="ja"><meta charset="utf-8"><title>CPU ACT 実機テスト</title>
+<!doctype html><html lang="ja"><meta charset="utf-8"><title>初期検出値入力の小型ACT（検討用）実機テスト</title>
 <style>body{font:17px system-ui;max-width:1100px;margin:20px auto;padding:0 15px}button,input{font:inherit;margin:5px;padding:9px}button{cursor:pointer}#joints{display:flex;flex-wrap:wrap;gap:8px}.joint{padding:8px;background:#eef3f7;border-radius:8px;width:180px}input{width:65px}img{width:640px;max-width:100%;background:#eee}#stop{background:#b92121;color:white;font-size:23px}pre{white-space:pre-wrap}#message{padding:15px;background:#eef3f7}.error{color:#b00020}</style>
-<h1>CPU ACT 実機テスト</h1>
+<h1>初期検出値入力の小型ACT（検討用）実機テスト</h1>
 <p>YOLOv8nで最初だけ検出し、その位置と現在の関節指令角度からACTが操作を予測します。手首80°固定、速度25°/秒、1更新の変更は最大2°です。</p>
 <p>接続時は保持が解除されます。アームを支えて接続し、実物の姿勢と開始角度を確認して有効にしてください。</p>
 <button onclick="act({action:'connect'})">1. USB接続</button><button id="stop" onclick="act({action:'stop'})">停止・保持</button>

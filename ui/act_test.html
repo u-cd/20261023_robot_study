@@ -1,0 +1,40 @@
+<!doctype html><html lang="ja"><meta charset="utf-8"><title>ローカルCPU ACT 実機テスト</title>
+<style>body{font:17px system-ui;max-width:1100px;margin:20px auto;padding:0 15px}button,input{font:inherit;margin:5px;padding:9px}button{cursor:pointer}#joints{display:flex;flex-wrap:wrap;gap:8px}.joint{padding:8px;background:#eef3f7;border-radius:8px;width:180px}input{width:65px}img{width:640px;max-width:100%;background:#eee}#stop{background:#b92121;color:white;font-size:23px}pre{white-space:pre-wrap}#message{padding:15px;background:#eef3f7}.error{color:#b00020}</style>
+<h1>ローカルCPU ACT 実機テスト</h1>
+<p>指定した制御ステップ間隔で現在の画像と角度をこのPCに入力し、間は予測済みの操作列を使います。temporal aggregation：__AGGREGATION__。検出器は使いません。モデルの絶対目標角度を送ります。基板速度は実演時と同じ25°/秒。独自の2°制限や手首の出力固定は行いません。</p>
+<p>接続時は保持が解除されます。アームを支えて接続し、実物の姿勢と開始角度を確認して有効にしてください。</p>
+<button onclick="act({action:'connect'})">1. USB接続</button><button id="stop" onclick="act({action:'stop'})">停止・保持</button>
+<div id="joints"></div><p>推論間隔 <input id="interval" type="number" min="1" max="100" value="__QUERY_EVERY__">制御ステップに1回 <button onclick="act({action:'query_interval',steps:Number(document.querySelector('#interval').value)})">適用</button> 20ステップ＝学習時の1秒分。実時間の1秒ではありません。変更は次の試行の開始前に行います。</p>
+<p>学習時の開始姿勢は __INITIAL_POSE__。</p>
+<img id="camera" alt="ライブカメラ"><br>
+<button onclick="act({action:'confirm_input'})">2. 画像入力を確認</button>
+<button onclick="act({action:'preview'})">3. 予測だけ表示</button>
+<p>現在の制御ステップに対応する予測を使います。集約の有無は起動時の指定に従います。学習データの20Hzに対し、通信・基板を含む実際の周期を表示します。</p>
+<button onclick="act({action:'run',steps:1})">4. モデルで1回更新</button>
+<button onclick="act({action:'run',steps:10})">10回更新する</button>
+<button onclick="act({action:'run',steps:1000})">連続実行（最大1000回）</button>
+<p>推論する更新では応答を待ちます。指定回数または30分で自動停止します。coin付近で手動の位置調整が必要になる場合があります。異常があれば停止してください。</p>
+<h2>配置を変えて繰り返し試す</h2>
+<button onclick="act({action:'return_initial'})">開始姿勢へ戻す</button>
+<button onclick="act({action:'next_trial'})">次の試行（画像入力をクリア）</button>
+<p>停止後、経路に物がないことを確認して開始姿勢へ戻します。次の試行を作成し、スポンジとcoinを置き直して「画像入力を確定」してください。記録は試行ごとに分けて保存します。</p>
+<div id="message"></div><pre id="info"></pre>
+<script>
+const token='__TOKEN__';const names=['台座','肩','肘','手首','グリッパー'];const initial=__ENABLE_ANGLES__;
+let pending=false;let errorUntil=0;
+document.querySelector('#joints').innerHTML=names.map((name,i)=>`<div class="joint"><b>${name}</b><div id="state${i}">未取得</div><input id="angle${i}" type="number" min="${i===4?50:0}" max="${i===4?150:180}" value="${initial[i]}"><button onclick="enable(${i})">有効化</button></div>`).join('');
+function enable(i){act({action:'manual',command:{action:'start',joint:i+1,angle:Number(document.querySelector('#angle'+i).value)}})}
+async function act(body){
+ if(pending && body.action!=='stop')return;
+ pending=true;
+ try{const response=await fetch('/api',{method:'POST',headers:{'Content-Type':'application/json','X-Arm-Token':token},body:JSON.stringify(body)});const data=await response.json();if(!response.ok)throw Error(data.error||'通信エラー');render(data)}
+ catch(e){errorUntil=Date.now()+5000;document.querySelector('#message').textContent=e.message;document.querySelector('#message').className='error'}finally{pending=false}
+}
+function render(s){
+ if(Date.now()>errorUntil){document.querySelector('#message').textContent=s.message;document.querySelector('#message').className='';}
+ for(const j of s.joints)document.querySelector('#state'+(j.joint-1)).textContent=`${j.active?'有効':'無効'} 指令${j.angle}° → ${j.target}°`;
+ document.querySelector('#info').textContent=JSON.stringify({試行番号:s.trial_number,推論実行場所:s.inference_device,推論間隔ステップ:s.query_every_steps,学習時の秒数:s.query_interval_training_seconds,動作中:s.running,更新回数:s.steps,予測角度:s.prediction_deg,処理時間中央値ms:s.actual_update_median_ms,実測更新Hz:s.actual_update_hz,モデルへの推論要求数:s.queries,目標50ms超過数:s.deadline_misses,カメラ:s.camera_error,記録先:s.output},null,2);
+}
+async function poll(){try{render(await(await fetch('/state')).json())}catch(e){}setTimeout(poll,500)}poll();
+const image=document.querySelector('#camera');function refresh(){image.src='/frame.jpg?t='+Date.now()}image.onload=()=>setTimeout(refresh,150);image.onerror=()=>setTimeout(refresh,700);refresh();
+</script></html>

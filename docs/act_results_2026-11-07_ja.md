@@ -2,17 +2,19 @@
 
 記録日：**2026-11-07（日本時間）**。この日の終了時点の結果を残すためのまとめ。
 
-対象は、①初期検出値入力の小型ACT、②画像入力のフルサイズACTの2モデル。②をRunPod GPUとローカルCPUで動かしたものは、同じ重みを使う同一モデルであり、別の学習モデルとして数えない。
+呼称は2026-11-08に統一：採用中を「ACT」、検討モデルを「初期検出値入力の小型ACT」とする。後者は現時点では採用見送り。数値と当日の実験結果は変更していない。
+
+対象は、①初期検出値入力の小型ACT、②ACTの2モデル。②をRunPod GPUとローカルCPUで動かしたものは、同じ重みを使う同一モデルであり、別の学習モデルとして数えない。
 
 ## 1. 今日の到達点
 
-**RunPodで学習した画像入力ACTを、このPCのCPUへ移して推論し、スポンジをつかんでcoin付近へ運び、手動の位置調整後に解放・退避まで進む一連の動作を確認できた。**
+**RunPodで学習したACTを、このPCのCPUへ移して推論し、スポンジをつかんでcoin付近へ運び、手動の位置調整後に解放・退避まで進む一連の動作を確認できた。**
 
-画像入力ACTのローカル推論は約0.5〜0.6秒。20制御ステップに1回の推論なら、ユーザーの評価ではリアルタイムに近い、十分実用的な速度で動作した。今後の検証を、RunPodを常時起動せずにこのPCで続けられる状態になった。
+ACTのローカル推論は約0.5〜0.6秒。20制御ステップに1回の推論なら、ユーザーの評価ではリアルタイムに近い、十分実用的な速度で動作した。今後の検証を、RunPodを常時起動せずにこのPCで続けられる状態になった。
 
 一方、**coin付近から解放へ進めずに動作がループする問題が残る**。手動で位置を微調整すると、その後は自動で最後まで進む挙動がRunPod・ローカルCPUの両方で見られた。完全無介入で安定して成功する段階には、まだ到達していない。
 
-|項目|① 初期検出値入力の小型ACT|② 画像入力のフルサイズACT|
+|項目|① 初期検出値入力の小型ACT|② ACT|
 |---|---|---|
 |観測|開始時のsponge・coinの検出値を保持＋現在の関節指令角度|現在のカメラ画像＋現在の関節指令角度|
 |学習場所|ローカルCPU|RunPod A40|
@@ -100,11 +102,11 @@ YOLOv8nで開始前の異なる5フレームからspongeとcoinを検出する�
 
 ユーザー報告では、何回か動いた後に動かなくなり、スポンジの把持には至らなかった。検出モデル自体は問題ないという確認だった。
 
-ただし、この時の試験UIは、毎回予測したchunkの先頭1ステップだけを使用し、1更新の変更量を2°以内へ制限し、手首の出力を80°に固定していた。後の画像入力ACTのtemporal aggregationありの試験とは実行条件が異なる。**失敗原因を、検出値入力やモデルの小型化だけに断定できない。**
+ただし、この時の試験UIは、毎回予測したchunkの先頭1ステップだけを使用し、1更新の変更量を2°以内へ制限し、手首の出力を80°に固定していた。後のACTのtemporal aggregationありの試験とは実行条件が異なる。**失敗原因を、検出値入力やモデルの小型化だけに断定できない。**
 
-当面、このモデルの原因調査は保留し、画像入力ACTの検証を優先する。
+当面、このモデルの原因調査は保留し、ACTの検証を優先する。
 
-## 4. モデル②：画像入力のフルサイズACT
+## 4. モデル②：ACT
 
 ### 構成と学習
 
@@ -133,7 +135,7 @@ YOLOv8nで開始前の異なる5フレームからspongeとcoinを検出する�
 
 最初の基準条件は、現在画像・現在角度から毎更新で推論し、公式のtemporal aggregation（k=0.01）を使う方式。公式のゼロ行除外、古い予測からの行順、重み付け・正規化を維持し、集約後にactionを逆正規化する。
 
-公式の集約計算を共用関数として切り出し、元の処理との一致をテストした。外部コードの変更は `patches/act_cpu.patch` に保存し、理由・元コミット・適用方法を記録している。
+公式の集約計算を共用関数として切り出し、元の処理との一致をテストした。外部コードの変更は `experiments/initial_detection_act/act_cpu.patch` に保存し、理由・元コミット・適用方法を記録している。
 
 画像入力版では、小型モデルの初期UIにあった独自の2°クリップと手首出力の固定を外した。基板へは絶対目標角度を整数度へ丸めて送信する。基板速度は実演時と同じ25°/秒。指令範囲外の予測は自動で置換せず停止する。
 
@@ -195,7 +197,7 @@ GPU・CPUの数字は計測方法・重み・稼働条件が一部異なるた�
 
 ## 7. 次回の検証につながる結論
 
-今日の成果は、画像入力ACTの学習から実機での搬送、さらに同じモデルのローカルCPU運用までつながったこと。高速な小型モデルの試験は搬送に至らず、速度だけでは実機の成立性を判断できないことも確認対象として残った。
+今日の成果は、ACTの学習から実機での搬送、さらに同じモデルのローカルCPU運用までつながったこと。高速な小型モデルの試験は搬送に至らず、速度だけでは実機の成立性を判断できないことも確認対象として残った。
 
 今後の計画の正本は[ルートの実験計画とメモ](../experiment_plan_ja.md)。本書は今日の結果のスナップショットとして残す。次回の優先課題は、coin付近で手動介入する直前・直後の画像、角度、集約前後の予測を比較し、ループの原因を絞ること。その後、推論間隔の比較と終了条件の検討を進める。
 
@@ -205,22 +207,22 @@ GPU・CPUの数字は計測方法・重み・稼働条件が一部異なるた�
 
 |対象|保存先|
 |---|---|
-|小型ACTの設定・学習結果|[設定と手順](reproduction_ja.md#モデル1初期検出値入力の小型act)、`runs/act_initial_detections_cpu_20261107/`|
-|小型ACTの推論用bundle|`runs/act_initial_detections_cpu_20261107/inference_bundle.pt`|
-|小型ACTのオフライン誤差・グラフ|[評価結果](../runs/act_initial_detections_cpu_20261107/evaluation.md)|
-|画像ACTの最良重み・正規化統計|`models/act_image_runpod_20261107/policy_best.ckpt`、`dataset_stats.pkl`|
-|画像ACTのローカル速度|[測定JSON](../runs/act_image_local_cpu_check_20261107/report.json)|
-|ローカル前処理の公式経路との比較|[比較JSON](../runs/act_image_local_cpu_check_20261107/official_preprocessing_check.json)|
-|通信を含むRunPod推論時間|[測定JSON](../runs/runpod_image_act_inference_check_20261107/after_download_timing.json)|
+|小型ACTの設定・学習結果|[設定と手順](reproduction_ja.md#モデル1初期検出値入力の小型act)、`runs/training/initial_detection_act_20261107/`|
+|小型ACTの推論用bundle|`runs/training/initial_detection_act_20261107/inference_bundle.pt`|
+|小型ACTのオフライン誤差・グラフ|[評価結果](../runs/training/initial_detection_act_20261107/evaluation.md)|
+|ACTの最良重み・正規化統計|`models/act_image_runpod_20261107/policy_best.ckpt`、`dataset_stats.pkl`|
+|ACTのローカル速度|[測定JSON](../runs/verification/act_local_cpu_20261107/report.json)|
+|ローカル前処理の公式経路との比較|[比較JSON](../runs/verification/act_local_cpu_20261107/official_preprocessing_check.json)|
+|通信を含むRunPod推論時間|[測定JSON](../runs/verification/act_runpod_20261107/after_download_timing.json)|
 |実機試験の画像・指令・予測|`runs/act_robot_trials/` の各セッション・trialフォルダ|
-|共通の試験画面と画像モデル用コード|`scripts/test_detection_act.py`、`scripts/test_image_act.py`|
-|公式との差分と適用方法|[patches/README.md](../patches/README.md)|
-|画像ACTの試験手順・実行条件|[実機試験の説明](reproduction_ja.md#実機試験)|
+|ACTの試験画面とコード|`ui/act_test.html`、`ui/act_test.py`|
+|公式との差分と適用方法|[act/UPSTREAM.md](../act/UPSTREAM.md)|
+|ACTの試験手順・実行条件|[実機試験の説明](reproduction_ja.md#実機試験)|
 
 ローカル実行例：
 
 ```bash
-uv run --no-sync python scripts/test_image_act.py --local --query-every 20
+uv run --no-sync python -m act.imitate_episodes --eval --query-every 20
 ```
 
 既存サーバーがある場合は重複起動せず、http://127.0.0.1:8767 を使う。ローカルモードではRunPodの起動・推論サービス・SSHトンネルは不要。再接続時は実物の姿勢と一致する入力角度で有効化する。

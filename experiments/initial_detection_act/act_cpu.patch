@@ -1,11 +1,12 @@
 diff --git a/detr/main.py b/detr/main.py
-index 3c4a339..0511518 100644
+index 3c4a339..1b5f27e 100644
 --- a/detr/main.py
 +++ b/detr/main.py
-@@ -64,6 +64,15 @@ def get_args_parser():
+@@ -64,6 +64,16 @@ def get_args_parser():
      parser.add_argument('--chunk_size', action='store', type=int, help='chunk_size', required=False)
      parser.add_argument('--temporal_agg', action='store_true')
  
++    parser.add_argument('--policy_config', type=str)
 +    parser.add_argument('--offline_check', action='store_true')
 +    parser.add_argument('--state_dim', type=int, default=14)
 +    parser.add_argument('--single_episode_check', action='store_true')
@@ -18,7 +19,7 @@ index 3c4a339..0511518 100644
      return parser
  
  
-@@ -75,7 +84,7 @@ def build_ACT_model_and_optimizer(args_override):
+@@ -75,7 +85,7 @@ def build_ACT_model_and_optimizer(args_override):
          setattr(args, k, v)
  
      model = build_ACT_model(args)
@@ -27,7 +28,7 @@ index 3c4a339..0511518 100644
  
      param_dicts = [
          {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
-@@ -98,7 +107,7 @@ def build_CNNMLP_model_and_optimizer(args_override):
+@@ -98,7 +108,7 @@ def build_CNNMLP_model_and_optimizer(args_override):
          setattr(args, k, v)
  
      model = build_CNNMLP_model(args)
@@ -94,7 +95,7 @@ index bccfca7..63a501c 100644
      # From state
      # backbone = None # from state for now, no need for conv nets
 diff --git a/imitate_episodes.py b/imitate_episodes.py
-index 34f9a37..651eda6 100644
+index 34f9a37..f82d89e 100644
 --- a/imitate_episodes.py
 +++ b/imitate_episodes.py
 @@ -3,6 +3,9 @@ import numpy as np
@@ -107,7 +108,7 @@ index 34f9a37..651eda6 100644
  import matplotlib.pyplot as plt
  from copy import deepcopy
  from tqdm import tqdm
-@@ -16,13 +19,13 @@ from utils import compute_dict_mean, set_seed, detach_dict # helper functions
+@@ -16,13 +19,24 @@ from utils import compute_dict_mean, set_seed, detach_dict # helper functions
  from policy import ACTPolicy, CNNMLPPolicy
  from visualize_episodes import save_videos
  
@@ -117,12 +118,23 @@ index 34f9a37..651eda6 100644
  e = IPython.embed
  
  def main(args):
++    shared_policy_config = None
++    if args.get('policy_config'):
++        with open(args['policy_config']) as f:
++            shared_policy_config = json.load(f)['policy']
++        if args['policy_class'] != 'ACT':
++            raise ValueError('--policy_config is only supported for ACT')
++        # Dataset slicing and the top-level run config must agree with the model.
++        for argument, key in [('state_dim', 'state_dim'), ('chunk_size', 'num_queries'),
++                              ('lr', 'lr'), ('kl_weight', 'kl_weight'),
++                              ('hidden_dim', 'hidden_dim'), ('dim_feedforward', 'dim_feedforward')]:
++            args[argument] = shared_policy_config[key]
      set_seed(1)
 +    torch.set_num_threads(args['cpu_threads'])
      # command line parameters
      is_eval = args['eval']
      ckpt_dir = args['ckpt_dir']
-@@ -35,19 +38,34 @@ def main(args):
+@@ -35,19 +49,34 @@ def main(args):
  
      # get task parameters
      is_sim = task_name[:4] == 'sim_'
@@ -159,10 +171,14 @@ index 34f9a37..651eda6 100644
      lr_backbone = 1e-5
      backbone = 'resnet18'
      if policy_class == 'ACT':
-@@ -72,7 +90,12 @@ def main(args):
+@@ -72,7 +101,16 @@ def main(args):
      else:
          raise NotImplementedError
  
++    if shared_policy_config is not None:
++        if shared_policy_config['camera_names'] != camera_names:
++            raise ValueError('Configured cameras do not match the dataset')
++        policy_config = dict(shared_policy_config)
 +    policy_config['device'] = args['device']
 +    policy_config['state_dim'] = state_dim
 +
@@ -172,7 +188,7 @@ index 34f9a37..651eda6 100644
          'num_epochs': num_epochs,
          'ckpt_dir': ckpt_dir,
          'episode_len': episode_len,
-@@ -88,6 +111,10 @@ def main(args):
+@@ -88,6 +126,10 @@ def main(args):
          'real_robot': not is_sim
      }
  
@@ -183,16 +199,21 @@ index 34f9a37..651eda6 100644
      if is_eval:
          ckpt_names = [f'policy_best.ckpt']
          results = []
-@@ -100,7 +127,7 @@ def main(args):
+@@ -100,7 +142,12 @@ def main(args):
          print()
          exit()
  
 -    train_dataloader, val_dataloader, stats, _ = load_data(dataset_dir, num_episodes, camera_names, batch_size_train, batch_size_val)
 +    train_dataloader, val_dataloader, stats, _ = load_data(dataset_dir, num_episodes, camera_names, batch_size_train, batch_size_val, single_episode_check=args['single_episode_check'], action_chunk_size=args['chunk_size'] if policy_class == 'ACT' else None)
++
++    # Keep the exact resolved architecture beside its weights for inference.
++    os.makedirs(ckpt_dir, exist_ok=True)
++    with open(os.path.join(ckpt_dir, 'policy_config.json'), 'w') as f:
++        json.dump(policy_config, f, indent=2)
  
      # save dataset stats
      if not os.path.isdir(ckpt_dir):
-@@ -118,6 +145,62 @@ def main(args):
+@@ -118,6 +165,62 @@ def main(args):
      print(f'Best ckpt, val loss {min_val_loss:.6f} @ epoch{best_epoch}')
  
  
@@ -255,7 +276,7 @@ index 34f9a37..651eda6 100644
  def make_policy(policy_class, policy_config):
      if policy_class == 'ACT':
          policy = ACTPolicy(policy_config)
-@@ -138,18 +221,31 @@ def make_optimizer(policy_class, policy):
+@@ -138,18 +241,31 @@ def make_optimizer(policy_class, policy):
      return optimizer
  
  
@@ -289,7 +310,7 @@ index 34f9a37..651eda6 100644
      ckpt_dir = config['ckpt_dir']
      state_dim = config['state_dim']
      real_robot = config['real_robot']
-@@ -165,9 +261,9 @@ def eval_bc(config, ckpt_name, save_episode=True):
+@@ -165,9 +281,9 @@ def eval_bc(config, ckpt_name, save_episode=True):
      # load policy and stats
      ckpt_path = os.path.join(ckpt_dir, ckpt_name)
      policy = make_policy(policy_class, policy_config)
@@ -301,7 +322,7 @@ index 34f9a37..651eda6 100644
      policy.eval()
      print(f'Loaded: {ckpt_path}')
      stats_path = os.path.join(ckpt_dir, f'dataset_stats.pkl')
-@@ -184,7 +280,7 @@ def eval_bc(config, ckpt_name, save_episode=True):
+@@ -184,7 +300,7 @@ def eval_bc(config, ckpt_name, save_episode=True):
          env = make_real_env(init_node=True)
          env_max_reward = 0
      else:
@@ -310,7 +331,7 @@ index 34f9a37..651eda6 100644
          env = make_sim_env(task_name)
          env_max_reward = env.task.max_reward
  
-@@ -195,7 +291,7 @@ def eval_bc(config, ckpt_name, save_episode=True):
+@@ -195,7 +311,7 @@ def eval_bc(config, ckpt_name, save_episode=True):
  
      max_timesteps = int(max_timesteps * 1) # may increase for real-world tasks
  
@@ -319,7 +340,7 @@ index 34f9a37..651eda6 100644
      episode_returns = []
      highest_rewards = []
      for rollout_id in range(num_rollouts):
-@@ -216,9 +312,9 @@ def eval_bc(config, ckpt_name, save_episode=True):
+@@ -216,9 +332,9 @@ def eval_bc(config, ckpt_name, save_episode=True):
  
          ### evaluation loop
          if temporal_agg:
@@ -331,7 +352,7 @@ index 34f9a37..651eda6 100644
          image_list = [] # for visualization
          qpos_list = []
          target_qpos_list = []
-@@ -239,9 +335,9 @@ def eval_bc(config, ckpt_name, save_episode=True):
+@@ -239,9 +355,9 @@ def eval_bc(config, ckpt_name, save_episode=True):
                      image_list.append({'main': obs['image']})
                  qpos_numpy = np.array(obs['qpos'])
                  qpos = pre_process(qpos_numpy)
@@ -343,7 +364,7 @@ index 34f9a37..651eda6 100644
  
                  ### query policy
                  if config['policy_class'] == "ACT":
-@@ -250,13 +346,7 @@ def eval_bc(config, ckpt_name, save_episode=True):
+@@ -250,13 +366,7 @@ def eval_bc(config, ckpt_name, save_episode=True):
                      if temporal_agg:
                          all_time_actions[[t], t:t+num_queries] = all_actions
                          actions_for_curr_step = all_time_actions[:, t]
@@ -358,7 +379,7 @@ index 34f9a37..651eda6 100644
                      else:
                          raw_action = all_actions[:, t % query_frequency]
                  elif config['policy_class'] == "CNNMLP":
-@@ -315,7 +405,8 @@ def eval_bc(config, ckpt_name, save_episode=True):
+@@ -315,7 +425,8 @@ def eval_bc(config, ckpt_name, save_episode=True):
  
  def forward_pass(data, policy):
      image_data, qpos_data, action_data, is_pad = data
@@ -368,7 +389,7 @@ index 34f9a37..651eda6 100644
      return policy(qpos_data, image_data, action_data, is_pad) # TODO remove None
  
  
-@@ -329,7 +420,7 @@ def train_bc(train_dataloader, val_dataloader, config):
+@@ -329,7 +440,7 @@ def train_bc(train_dataloader, val_dataloader, config):
      set_seed(seed)
  
      policy = make_policy(policy_class, policy_config)
@@ -377,10 +398,11 @@ index 34f9a37..651eda6 100644
      optimizer = make_optimizer(policy_class, policy)
  
      train_history = []
-@@ -432,4 +523,13 @@ if __name__ == '__main__':
+@@ -432,4 +543,14 @@ if __name__ == '__main__':
      parser.add_argument('--dim_feedforward', action='store', type=int, help='dim_feedforward', required=False)
      parser.add_argument('--temporal_agg', action='store_true')
      
++    parser.add_argument('--policy_config', type=str, help='JSON with a shared policy configuration')
 +    parser.add_argument('--offline_check', action='store_true')
 +    parser.add_argument('--state_dim', type=int, default=14)
 +    parser.add_argument('--single_episode_check', action='store_true')

@@ -8,15 +8,12 @@ import IPython
 e = IPython.embed
 
 class EpisodicDataset(torch.utils.data.Dataset):
-    def __init__(self, episode_ids, dataset_dir, camera_names, norm_stats, action_chunk_size=None):
+    def __init__(self, episode_ids, dataset_dir, camera_names, norm_stats):
         super(EpisodicDataset).__init__()
         self.episode_ids = episode_ids
         self.dataset_dir = dataset_dir
         self.camera_names = camera_names
         self.norm_stats = norm_stats
-        self.action_chunk_size = action_chunk_size
-        if action_chunk_size is not None and action_chunk_size < 1:
-            raise ValueError('action_chunk_size must be positive')
         self.is_sim = None
         self.__getitem__(0) # initialize self.is_sim
 
@@ -43,19 +40,17 @@ class EpisodicDataset(torch.utils.data.Dataset):
             for cam_name in self.camera_names:
                 image_dict[cam_name] = root[f'/observations/images/{cam_name}'][start_ts]
             # get all actions after and including start_ts
-            # Preserve the upstream default; already-aligned custom files opt out explicitly.
-            action_offset = int(root.attrs.get('action_offset', 0 if is_sim else -1))
-            if action_offset not in (0, -1):
-                raise ValueError('Unsupported action_offset')
-            action_start = max(0, start_ts + action_offset)
-            output_len = self.action_chunk_size or episode_len
-            action = root['/action'][action_start:action_start + output_len]
-            action_len = len(action)
+            if is_sim:
+                action = root['/action'][start_ts:]
+                action_len = episode_len - start_ts
+            else:
+                action = root['/action'][max(0, start_ts - 1):] # hack, to make timesteps more aligned
+                action_len = episode_len - max(0, start_ts - 1) # hack, to make timesteps more aligned
 
         self.is_sim = is_sim
-        padded_action = np.zeros((output_len, original_action_shape[1]), dtype=np.float32)
+        padded_action = np.zeros(original_action_shape, dtype=np.float32)
         padded_action[:action_len] = action
-        is_pad = np.zeros(output_len)
+        is_pad = np.zeros(episode_len)
         is_pad[action_len:] = 1
 
         # new axis for different cameras
@@ -92,19 +87,18 @@ def get_norm_stats(dataset_dir, num_episodes):
             action = root['/action'][()]
         all_qpos_data.append(torch.from_numpy(qpos))
         all_action_data.append(torch.from_numpy(action))
-    # Concatenate valid frames: also supports demonstrations with different lengths.
-    all_qpos_data = torch.cat(all_qpos_data, dim=0)
-    all_action_data = torch.cat(all_action_data, dim=0)
+    all_qpos_data = torch.stack(all_qpos_data)
+    all_action_data = torch.stack(all_action_data)
     all_action_data = all_action_data
 
     # normalize action data
-    action_mean = all_action_data.mean(dim=0, keepdim=True)
-    action_std = all_action_data.std(dim=0, keepdim=True)
+    action_mean = all_action_data.mean(dim=[0, 1], keepdim=True)
+    action_std = all_action_data.std(dim=[0, 1], keepdim=True)
     action_std = torch.clip(action_std, 1e-2, np.inf) # clipping
 
     # normalize qpos data
-    qpos_mean = all_qpos_data.mean(dim=0, keepdim=True)
-    qpos_std = all_qpos_data.std(dim=0, keepdim=True)
+    qpos_mean = all_qpos_data.mean(dim=[0, 1], keepdim=True)
+    qpos_std = all_qpos_data.std(dim=[0, 1], keepdim=True)
     qpos_std = torch.clip(qpos_std, 1e-2, np.inf) # clipping
 
     stats = {"action_mean": action_mean.numpy().squeeze(), "action_std": action_std.numpy().squeeze(),
@@ -114,7 +108,7 @@ def get_norm_stats(dataset_dir, num_episodes):
     return stats
 
 
-def load_data(dataset_dir, num_episodes, camera_names, batch_size_train, batch_size_val, single_episode_check=False, action_chunk_size=None):
+def load_data(dataset_dir, num_episodes, camera_names, batch_size_train, batch_size_val):
     print(f'\nData from: {dataset_dir}\n')
     # obtain train test split
     train_ratio = 0.8
@@ -122,20 +116,12 @@ def load_data(dataset_dir, num_episodes, camera_names, batch_size_train, batch_s
     train_indices = shuffled_indices[:int(train_ratio * num_episodes)]
     val_indices = shuffled_indices[int(train_ratio * num_episodes):]
 
-    if num_episodes == 1:
-        if not single_episode_check:
-            raise ValueError('One episode has no independent validation split. Use explicit --single_episode_check for execution checks only.')
-        print('WARNING: single-episode execution check; train and validation use the SAME demonstration.')
-        train_indices = val_indices = np.array([0])
-    elif single_episode_check:
-        raise ValueError('single_episode_check requires exactly one episode')
-
     # obtain normalization stats for qpos and action
     norm_stats = get_norm_stats(dataset_dir, num_episodes)
 
     # construct dataset and dataloader
-    train_dataset = EpisodicDataset(train_indices, dataset_dir, camera_names, norm_stats, action_chunk_size)
-    val_dataset = EpisodicDataset(val_indices, dataset_dir, camera_names, norm_stats, action_chunk_size)
+    train_dataset = EpisodicDataset(train_indices, dataset_dir, camera_names, norm_stats)
+    val_dataset = EpisodicDataset(val_indices, dataset_dir, camera_names, norm_stats)
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size_train, shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1)
     val_dataloader = DataLoader(val_dataset, batch_size=batch_size_val, shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1)
 

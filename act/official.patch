@@ -1,0 +1,1090 @@
+--- a/act/detr/models/__init__.py
++++ b/act/detr/models/__init__.py
+@@ -1,9 +1,6 @@
+ # Copyright (c) Facebook, Inc. and its affiliates. All Rights Reserved
+ from .detr_vae import build as build_vae
+-from .detr_vae import build_cnnmlp as build_cnnmlp
++
+ 
+ def build_ACT_model(args):
+     return build_vae(args)
+-
+-def build_CNNMLP_model(args):
+-    return build_cnnmlp(args)
+\ No newline at end of file
+--- a/act/detr/models/transformer.py
++++ b/act/detr/models/transformer.py
+@@ -14,8 +14,6 @@
+ import torch.nn.functional as F
+ from torch import nn, Tensor
+ 
+-import IPython
+-e = IPython.embed
+ 
+ class Transformer(nn.Module):
+ 
+--- a/act/detr/models/position_encoding.py
++++ b/act/detr/models/position_encoding.py
+@@ -6,10 +6,8 @@
+ import torch
+ from torch import nn
+ 
+-from util.misc import NestedTensor
++from torch import Tensor as NestedTensor
+ 
+-import IPython
+-e = IPython.embed
+ 
+ class PositionEmbeddingSine(nn.Module):
+     """
+--- a/act/detr/models/backbone.py
++++ b/act/detr/models/backbone.py
+@@ -11,12 +11,10 @@
+ from torchvision.models._utils import IntermediateLayerGetter
+ from typing import Dict, List
+ 
+-from util.misc import NestedTensor, is_main_process
++from torch import Tensor as NestedTensor
+ 
+ from .position_encoding import build_position_encoding
+ 
+-import IPython
+-e = IPython.embed
+ 
+ class FrozenBatchNorm2d(torch.nn.Module):
+     """
+@@ -88,10 +86,10 @@
+     def __init__(self, name: str,
+                  train_backbone: bool,
+                  return_interm_layers: bool,
+-                 dilation: bool):
++                 dilation: bool, pretrained: bool = True):
+         backbone = getattr(torchvision.models, name)(
+             replace_stride_with_dilation=[False, False, dilation],
+-            pretrained=is_main_process(), norm_layer=FrozenBatchNorm2d) # pretrained # TODO do we want frozen batch_norm??
++            pretrained=pretrained, norm_layer=FrozenBatchNorm2d) # pretrained # TODO do we want frozen batch_norm??
+         num_channels = 512 if name in ('resnet18', 'resnet34') else 2048
+         super().__init__(backbone, train_backbone, num_channels, return_interm_layers)
+ 
+@@ -116,7 +114,7 @@
+     position_embedding = build_position_encoding(args)
+     train_backbone = args.lr_backbone > 0
+     return_interm_layers = args.masks
+-    backbone = Backbone(args.backbone, train_backbone, return_interm_layers, args.dilation)
++    backbone = Backbone(args.backbone, train_backbone, return_interm_layers, args.dilation, getattr(args, "pretrained", True))
+     model = Joiner(backbone, position_embedding)
+     model.num_channels = backbone.num_channels
+     return model
+--- a/act/detr/models/detr_vae.py
++++ b/act/detr/models/detr_vae.py
+@@ -10,8 +10,6 @@
+ 
+ import numpy as np
+ 
+-import IPython
+-e = IPython.embed
+ 
+ 
+ def reparametrize(mu, logvar):
+@@ -55,10 +53,10 @@
+         if backbones is not None:
+             self.input_proj = nn.Conv2d(backbones[0].num_channels, hidden_dim, kernel_size=1)
+             self.backbones = nn.ModuleList(backbones)
+-            self.input_proj_robot_state = nn.Linear(14, hidden_dim)
++            self.input_proj_robot_state = nn.Linear(state_dim, hidden_dim)
+         else:
+             # input_dim = 14 + 7 # robot_state + env_state
+-            self.input_proj_robot_state = nn.Linear(14, hidden_dim)
++            self.input_proj_robot_state = nn.Linear(state_dim, hidden_dim)
+             self.input_proj_env_state = nn.Linear(7, hidden_dim)
+             self.pos = torch.nn.Embedding(2, hidden_dim)
+             self.backbones = None
+@@ -66,8 +64,8 @@
+         # encoder extra parameters
+         self.latent_dim = 32 # final size of latent z # TODO tune
+         self.cls_embed = nn.Embedding(1, hidden_dim) # extra cls token embedding
+-        self.encoder_action_proj = nn.Linear(14, hidden_dim) # project action to embedding
+-        self.encoder_joint_proj = nn.Linear(14, hidden_dim)  # project qpos to embedding
++        self.encoder_action_proj = nn.Linear(state_dim, hidden_dim) # project action to embedding
++        self.encoder_joint_proj = nn.Linear(state_dim, hidden_dim)  # project qpos to embedding
+         self.latent_proj = nn.Linear(hidden_dim, self.latent_dim*2) # project hidden state to latent std, var
+         self.register_buffer('pos_table', get_sinusoid_encoding_table(1+1+num_queries, hidden_dim)) # [CLS], qpos, a_seq
+ 
+@@ -139,76 +137,6 @@
+         return a_hat, is_pad_hat, [mu, logvar]
+ 
+ 
+-
+-class CNNMLP(nn.Module):
+-    def __init__(self, backbones, state_dim, camera_names):
+-        """ Initializes the model.
+-        Parameters:
+-            backbones: torch module of the backbone to be used. See backbone.py
+-            transformer: torch module of the transformer architecture. See transformer.py
+-            state_dim: robot state dimension of the environment
+-            num_queries: number of object queries, ie detection slot. This is the maximal number of objects
+-                         DETR can detect in a single image. For COCO, we recommend 100 queries.
+-            aux_loss: True if auxiliary decoding losses (loss at each decoder layer) are to be used.
+-        """
+-        super().__init__()
+-        self.camera_names = camera_names
+-        self.action_head = nn.Linear(1000, state_dim) # TODO add more
+-        if backbones is not None:
+-            self.backbones = nn.ModuleList(backbones)
+-            backbone_down_projs = []
+-            for backbone in backbones:
+-                down_proj = nn.Sequential(
+-                    nn.Conv2d(backbone.num_channels, 128, kernel_size=5),
+-                    nn.Conv2d(128, 64, kernel_size=5),
+-                    nn.Conv2d(64, 32, kernel_size=5)
+-                )
+-                backbone_down_projs.append(down_proj)
+-            self.backbone_down_projs = nn.ModuleList(backbone_down_projs)
+-
+-            mlp_in_dim = 768 * len(backbones) + 14
+-            self.mlp = mlp(input_dim=mlp_in_dim, hidden_dim=1024, output_dim=14, hidden_depth=2)
+-        else:
+-            raise NotImplementedError
+-
+-    def forward(self, qpos, image, env_state, actions=None):
+-        """
+-        qpos: batch, qpos_dim
+-        image: batch, num_cam, channel, height, width
+-        env_state: None
+-        actions: batch, seq, action_dim
+-        """
+-        is_training = actions is not None # train or val
+-        bs, _ = qpos.shape
+-        # Image observation features and position embeddings
+-        all_cam_features = []
+-        for cam_id, cam_name in enumerate(self.camera_names):
+-            features, pos = self.backbones[cam_id](image[:, cam_id])
+-            features = features[0] # take the last layer feature
+-            pos = pos[0] # not used
+-            all_cam_features.append(self.backbone_down_projs[cam_id](features))
+-        # flatten everything
+-        flattened_features = []
+-        for cam_feature in all_cam_features:
+-            flattened_features.append(cam_feature.reshape([bs, -1]))
+-        flattened_features = torch.cat(flattened_features, axis=1) # 768 each
+-        features = torch.cat([flattened_features, qpos], axis=1) # qpos: 14
+-        a_hat = self.mlp(features)
+-        return a_hat
+-
+-
+-def mlp(input_dim, hidden_dim, output_dim, hidden_depth):
+-    if hidden_depth == 0:
+-        mods = [nn.Linear(input_dim, output_dim)]
+-    else:
+-        mods = [nn.Linear(input_dim, hidden_dim), nn.ReLU(inplace=True)]
+-        for i in range(hidden_depth - 1):
+-            mods += [nn.Linear(hidden_dim, hidden_dim), nn.ReLU(inplace=True)]
+-        mods.append(nn.Linear(hidden_dim, output_dim))
+-    trunk = nn.Sequential(*mods)
+-    return trunk
+-
+-
+ def build_encoder(args):
+     d_model = args.hidden_dim # 256
+     dropout = args.dropout # 0.1
+@@ -227,7 +155,7 @@
+ 
+ 
+ def build(args):
+-    state_dim = 14 # TODO hardcode
++    state_dim = getattr(args, 'state_dim', 14)
+ 
+     # From state
+     # backbone = None # from state for now, no need for conv nets
+@@ -253,26 +181,3 @@
+     print("number of parameters: %.2fM" % (n_parameters/1e6,))
+ 
+     return model
+-
+-def build_cnnmlp(args):
+-    state_dim = 14 # TODO hardcode
+-
+-    # From state
+-    # backbone = None # from state for now, no need for conv nets
+-    # From image
+-    backbones = []
+-    for _ in args.camera_names:
+-        backbone = build_backbone(args)
+-        backbones.append(backbone)
+-
+-    model = CNNMLP(
+-        backbones,
+-        state_dim=state_dim,
+-        camera_names=args.camera_names,
+-    )
+-
+-    n_parameters = sum(p.numel() for p in model.parameters() if p.requires_grad)
+-    print("number of parameters: %.2fM" % (n_parameters/1e6,))
+-
+-    return model
+-
+--- a/act/policy.py
++++ b/act/policy.py
+@@ -1,72 +1,57 @@
+-import torch.nn as nn
++"""The single ACT model used for training and inference.
++
++Network computation is derived from ACT/DETR; no upstream runtime imports.
++Existing ACTPolicy checkpoints keep their model.* state-dict keys.
++"""
++import json
++import os
++from pathlib import Path
++from types import SimpleNamespace
++
++import torch
++from torch import nn
+ from torch.nn import functional as F
+-import torchvision.transforms as transforms
++from torchvision.transforms import Normalize
+ 
+-from detr.main import build_ACT_model_and_optimizer, build_CNNMLP_model_and_optimizer
+-import IPython
+-e = IPython.embed
++from .detr.models import build_ACT_model
++
++ROOT = Path(__file__).resolve().parents[1]
++CONFIG = ROOT / 'configs/act.json'
++
++
++def load_policy_config(checkpoint_dir=None):
++    snapshot = Path(checkpoint_dir)/'policy_config.json' if checkpoint_dir is not None else None
++    return json.loads(snapshot.read_text()) if snapshot is not None and snapshot.exists() else json.loads(CONFIG.read_text())['policy']
++
+ 
+ class ACTPolicy(nn.Module):
+-    def __init__(self, args_override):
++    def __init__(self, config, pretrained_backbone=False):
+         super().__init__()
+-        model, optimizer = build_ACT_model_and_optimizer(args_override)
+-        self.model = model # CVAE decoder
+-        self.optimizer = optimizer
+-        self.kl_weight = args_override['kl_weight']
+-        print(f'KL Weight {self.kl_weight}')
++        os.environ.setdefault('TORCH_HOME', str(ROOT/'models/torch'))
++        self.config = dict(config)
++        defaults = dict(dilation=False, masks=False, position_embedding='sine', pre_norm=False, dropout=0.1)
++        defaults.update(config)
++        defaults['pretrained'] = pretrained_backbone
++        self.model = build_ACT_model(SimpleNamespace(**defaults))
++        self.kl_weight = config['kl_weight']
+ 
+-    def __call__(self, qpos, image, actions=None, is_pad=None):
+-        env_state = None
+-        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+-                                         std=[0.229, 0.224, 0.225])
+-        image = normalize(image)
+-        if actions is not None: # training time
+-            actions = actions[:, :self.model.num_queries]
+-            is_pad = is_pad[:, :self.model.num_queries]
+-
+-            a_hat, is_pad_hat, (mu, logvar) = self.model(qpos, image, env_state, actions, is_pad)
+-            total_kld, dim_wise_kld, mean_kld = kl_divergence(mu, logvar)
+-            loss_dict = dict()
+-            all_l1 = F.l1_loss(actions, a_hat, reduction='none')
+-            l1 = (all_l1 * ~is_pad.unsqueeze(-1)).mean()
+-            loss_dict['l1'] = l1
+-            loss_dict['kl'] = total_kld[0]
+-            loss_dict['loss'] = loss_dict['l1'] + loss_dict['kl'] * self.kl_weight
+-            return loss_dict
+-        else: # inference time
+-            a_hat, _, (_, _) = self.model(qpos, image, env_state) # no action, sample from prior
+-            return a_hat
+-
+-    def configure_optimizers(self):
+-        return self.optimizer
++    def forward(self, qpos, image, actions=None, is_pad=None):
++        image = Normalize(mean=[0.485,0.456,0.406], std=[0.229,0.224,0.225])(image)
++        if actions is None:
++            return self.model(qpos, image, None)[0]
++        actions = actions[:, :self.model.num_queries]
++        is_pad = is_pad[:, :self.model.num_queries]
++        predicted, _, (mu, logvar) = self.model(qpos, image, None, actions, is_pad)
++        kl = kl_divergence(mu, logvar)[0][0]
++        l1 = (F.l1_loss(actions, predicted, reduction='none') * ~is_pad.unsqueeze(-1)).mean()
++        return dict(l1=l1, kl=kl, loss=l1 + self.kl_weight*kl)
+ 
+ 
+-class CNNMLPPolicy(nn.Module):
+-    def __init__(self, args_override):
+-        super().__init__()
+-        model, optimizer = build_CNNMLP_model_and_optimizer(args_override)
+-        self.model = model # decoder
+-        self.optimizer = optimizer
++def make_optimizer(model, config):
++    groups = [dict(params=[p for n,p in model.model.named_parameters() if 'backbone' not in n and p.requires_grad]),
++              dict(params=[p for n,p in model.model.named_parameters() if 'backbone' in n and p.requires_grad], lr=config['lr_backbone'])]
++    return torch.optim.AdamW(groups, lr=config['lr'], weight_decay=config.get('weight_decay', 1e-4))
+ 
+-    def __call__(self, qpos, image, actions=None, is_pad=None):
+-        env_state = None # TODO
+-        normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
+-                                         std=[0.229, 0.224, 0.225])
+-        image = normalize(image)
+-        if actions is not None: # training time
+-            actions = actions[:, 0]
+-            a_hat = self.model(qpos, image, env_state, actions)
+-            mse = F.mse_loss(actions, a_hat)
+-            loss_dict = dict()
+-            loss_dict['mse'] = mse
+-            loss_dict['loss'] = loss_dict['mse']
+-            return loss_dict
+-        else: # inference time
+-            a_hat = self.model(qpos, image, env_state) # no action, sample from prior
+-            return a_hat
+-
+-    def configure_optimizers(self):
+-        return self.optimizer
+ 
+ def kl_divergence(mu, logvar):
+     batch_size = mu.size(0)
+--- a/act/utils.py
++++ b/act/utils.py
+@@ -1,19 +1,21 @@
++"""HDF5 sampling and normalization, derived from ACT utils.py."""
++import os
++import h5py
+ import numpy as np
+ import torch
+-import os
+-import h5py
+-from torch.utils.data import TensorDataset, DataLoader
++from torch.utils.data import DataLoader
+ 
+-import IPython
+-e = IPython.embed
+ 
+ class EpisodicDataset(torch.utils.data.Dataset):
+-    def __init__(self, episode_ids, dataset_dir, camera_names, norm_stats):
++    def __init__(self, episode_ids, dataset_dir, camera_names, norm_stats, action_chunk_size=None):
+         super(EpisodicDataset).__init__()
+         self.episode_ids = episode_ids
+         self.dataset_dir = dataset_dir
+         self.camera_names = camera_names
+         self.norm_stats = norm_stats
++        self.action_chunk_size = action_chunk_size
++        if action_chunk_size is not None and action_chunk_size < 1:
++            raise ValueError('action_chunk_size must be positive')
+         self.is_sim = None
+         self.__getitem__(0) # initialize self.is_sim
+ 
+@@ -40,17 +42,19 @@
+             for cam_name in self.camera_names:
+                 image_dict[cam_name] = root[f'/observations/images/{cam_name}'][start_ts]
+             # get all actions after and including start_ts
+-            if is_sim:
+-                action = root['/action'][start_ts:]
+-                action_len = episode_len - start_ts
+-            else:
+-                action = root['/action'][max(0, start_ts - 1):] # hack, to make timesteps more aligned
+-                action_len = episode_len - max(0, start_ts - 1) # hack, to make timesteps more aligned
++            # Preserve the upstream default; already-aligned custom files opt out explicitly.
++            action_offset = int(root.attrs.get('action_offset', 0 if is_sim else -1))
++            if action_offset not in (0, -1):
++                raise ValueError('Unsupported action_offset')
++            action_start = max(0, start_ts + action_offset)
++            output_len = self.action_chunk_size or episode_len
++            action = root['/action'][action_start:action_start + output_len]
++            action_len = len(action)
+ 
+         self.is_sim = is_sim
+-        padded_action = np.zeros(original_action_shape, dtype=np.float32)
++        padded_action = np.zeros((output_len, original_action_shape[1]), dtype=np.float32)
+         padded_action[:action_len] = action
+-        is_pad = np.zeros(episode_len)
++        is_pad = np.zeros(output_len)
+         is_pad[action_len:] = 1
+ 
+         # new axis for different cameras
+@@ -87,18 +91,19 @@
+             action = root['/action'][()]
+         all_qpos_data.append(torch.from_numpy(qpos))
+         all_action_data.append(torch.from_numpy(action))
+-    all_qpos_data = torch.stack(all_qpos_data)
+-    all_action_data = torch.stack(all_action_data)
++    # Concatenate valid frames: also supports demonstrations with different lengths.
++    all_qpos_data = torch.cat(all_qpos_data, dim=0)
++    all_action_data = torch.cat(all_action_data, dim=0)
+     all_action_data = all_action_data
+ 
+     # normalize action data
+-    action_mean = all_action_data.mean(dim=[0, 1], keepdim=True)
+-    action_std = all_action_data.std(dim=[0, 1], keepdim=True)
++    action_mean = all_action_data.mean(dim=0, keepdim=True)
++    action_std = all_action_data.std(dim=0, keepdim=True)
+     action_std = torch.clip(action_std, 1e-2, np.inf) # clipping
+ 
+     # normalize qpos data
+-    qpos_mean = all_qpos_data.mean(dim=[0, 1], keepdim=True)
+-    qpos_std = all_qpos_data.std(dim=[0, 1], keepdim=True)
++    qpos_mean = all_qpos_data.mean(dim=0, keepdim=True)
++    qpos_std = all_qpos_data.std(dim=0, keepdim=True)
+     qpos_std = torch.clip(qpos_std, 1e-2, np.inf) # clipping
+ 
+     stats = {"action_mean": action_mean.numpy().squeeze(), "action_std": action_std.numpy().squeeze(),
+@@ -108,7 +113,7 @@
+     return stats
+ 
+ 
+-def load_data(dataset_dir, num_episodes, camera_names, batch_size_train, batch_size_val):
++def load_data(dataset_dir, num_episodes, camera_names, batch_size_train, batch_size_val, single_episode_check=False, action_chunk_size=None, num_workers=1):
+     print(f'\nData from: {dataset_dir}\n')
+     # obtain train test split
+     train_ratio = 0.8
+@@ -116,57 +121,25 @@
+     train_indices = shuffled_indices[:int(train_ratio * num_episodes)]
+     val_indices = shuffled_indices[int(train_ratio * num_episodes):]
+ 
++    if num_episodes == 1:
++        if not single_episode_check:
++            raise ValueError('One episode has no independent validation split. Use explicit --single_episode_check for execution checks only.')
++        print('WARNING: single-episode execution check; train and validation use the SAME demonstration.')
++        train_indices = val_indices = np.array([0])
++    elif single_episode_check:
++        raise ValueError('single_episode_check requires exactly one episode')
++
+     # obtain normalization stats for qpos and action
+     norm_stats = get_norm_stats(dataset_dir, num_episodes)
+ 
+     # construct dataset and dataloader
+-    train_dataset = EpisodicDataset(train_indices, dataset_dir, camera_names, norm_stats)
+-    val_dataset = EpisodicDataset(val_indices, dataset_dir, camera_names, norm_stats)
+-    train_dataloader = DataLoader(train_dataset, batch_size=batch_size_train, shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1)
+-    val_dataloader = DataLoader(val_dataset, batch_size=batch_size_val, shuffle=True, pin_memory=True, num_workers=1, prefetch_factor=1)
++    train_dataset = EpisodicDataset(train_indices, dataset_dir, camera_names, norm_stats, action_chunk_size)
++    val_dataset = EpisodicDataset(val_indices, dataset_dir, camera_names, norm_stats, action_chunk_size)
++    train_dataloader = DataLoader(train_dataset, batch_size=batch_size_train, shuffle=True, pin_memory=True, num_workers=num_workers, **({"prefetch_factor": 1} if num_workers else {}))
++    val_dataloader = DataLoader(val_dataset, batch_size=batch_size_val, shuffle=True, pin_memory=True, num_workers=num_workers, **({"prefetch_factor": 1} if num_workers else {}))
+ 
+     return train_dataloader, val_dataloader, norm_stats, train_dataset.is_sim
+ 
+-
+-### env utils
+-
+-def sample_box_pose():
+-    x_range = [0.0, 0.2]
+-    y_range = [0.4, 0.6]
+-    z_range = [0.05, 0.05]
+-
+-    ranges = np.vstack([x_range, y_range, z_range])
+-    cube_position = np.random.uniform(ranges[:, 0], ranges[:, 1])
+-
+-    cube_quat = np.array([1, 0, 0, 0])
+-    return np.concatenate([cube_position, cube_quat])
+-
+-def sample_insertion_pose():
+-    # Peg
+-    x_range = [0.1, 0.2]
+-    y_range = [0.4, 0.6]
+-    z_range = [0.05, 0.05]
+-
+-    ranges = np.vstack([x_range, y_range, z_range])
+-    peg_position = np.random.uniform(ranges[:, 0], ranges[:, 1])
+-
+-    peg_quat = np.array([1, 0, 0, 0])
+-    peg_pose = np.concatenate([peg_position, peg_quat])
+-
+-    # Socket
+-    x_range = [-0.2, -0.1]
+-    y_range = [0.4, 0.6]
+-    z_range = [0.05, 0.05]
+-
+-    ranges = np.vstack([x_range, y_range, z_range])
+-    socket_position = np.random.uniform(ranges[:, 0], ranges[:, 1])
+-
+-    socket_quat = np.array([1, 0, 0, 0])
+-    socket_pose = np.concatenate([socket_position, socket_quat])
+-
+-    return peg_pose, socket_pose
+-
+-### helper functions
+ 
+ def compute_dict_mean(epoch_dicts):
+     result = {k: None for k in epoch_dicts[0]}
+@@ -178,12 +151,14 @@
+         result[k] = value_sum / num_items
+     return result
+ 
++
+ def detach_dict(d):
+     new_d = dict()
+     for k, v in d.items():
+         new_d[k] = v.detach()
+     return new_d
+ 
++
+ def set_seed(seed):
+     torch.manual_seed(seed)
+     np.random.seed(seed)
+--- a/act/imitate_episodes.py
++++ b/act/imitate_episodes.py
+@@ -1,336 +1,49 @@
++"""ACT training, validation and rollout in one place, based on official imitate_episodes.py.
++
++UI/camera/USB are an environment adapter in ui/act_test.py. This module owns model
++loading, preprocessing, inference cadence, temporal aggregation and rollout.
++"""
++import argparse
++from collections import OrderedDict
++from copy import deepcopy
++from dataclasses import dataclass, field
++import json
++import os
++from pathlib import Path
++import pickle
++import time
++
++os.environ.setdefault('MPLCONFIGDIR', '/tmp/robot-act-matplotlib')
++import matplotlib
++matplotlib.use('Agg')
++import matplotlib.pyplot as plt
++import cv2
++import numpy as np
+ import torch
+-import numpy as np
+-import os
+-import pickle
+-import argparse
+-import matplotlib.pyplot as plt
+-from copy import deepcopy
+ from tqdm import tqdm
+-from einops import rearrange
+-
+-from constants import DT
+-from constants import PUPPET_GRIPPER_JOINT_OPEN
+-from utils import load_data # data functions
+-from utils import sample_box_pose, sample_insertion_pose # robot functions
+-from utils import compute_dict_mean, set_seed, detach_dict # helper functions
+-from policy import ACTPolicy, CNNMLPPolicy
+-from visualize_episodes import save_videos
+-
+-from sim_env import BOX_POSE
+-
+-import IPython
+-e = IPython.embed
+-
+-def main(args):
+-    set_seed(1)
+-    # command line parameters
+-    is_eval = args['eval']
+-    ckpt_dir = args['ckpt_dir']
+-    policy_class = args['policy_class']
+-    onscreen_render = args['onscreen_render']
+-    task_name = args['task_name']
+-    batch_size_train = args['batch_size']
+-    batch_size_val = args['batch_size']
+-    num_epochs = args['num_epochs']
+-
+-    # get task parameters
+-    is_sim = task_name[:4] == 'sim_'
+-    if is_sim:
+-        from constants import SIM_TASK_CONFIGS
+-        task_config = SIM_TASK_CONFIGS[task_name]
+-    else:
+-        from aloha_scripts.constants import TASK_CONFIGS
+-        task_config = TASK_CONFIGS[task_name]
+-    dataset_dir = task_config['dataset_dir']
+-    num_episodes = task_config['num_episodes']
+-    episode_len = task_config['episode_len']
+-    camera_names = task_config['camera_names']
+-
+-    # fixed parameters
+-    state_dim = 14
+-    lr_backbone = 1e-5
+-    backbone = 'resnet18'
+-    if policy_class == 'ACT':
+-        enc_layers = 4
+-        dec_layers = 7
+-        nheads = 8
+-        policy_config = {'lr': args['lr'],
+-                         'num_queries': args['chunk_size'],
+-                         'kl_weight': args['kl_weight'],
+-                         'hidden_dim': args['hidden_dim'],
+-                         'dim_feedforward': args['dim_feedforward'],
+-                         'lr_backbone': lr_backbone,
+-                         'backbone': backbone,
+-                         'enc_layers': enc_layers,
+-                         'dec_layers': dec_layers,
+-                         'nheads': nheads,
+-                         'camera_names': camera_names,
+-                         }
+-    elif policy_class == 'CNNMLP':
+-        policy_config = {'lr': args['lr'], 'lr_backbone': lr_backbone, 'backbone' : backbone, 'num_queries': 1,
+-                         'camera_names': camera_names,}
+-    else:
+-        raise NotImplementedError
+-
+-    config = {
+-        'num_epochs': num_epochs,
+-        'ckpt_dir': ckpt_dir,
+-        'episode_len': episode_len,
+-        'state_dim': state_dim,
+-        'lr': args['lr'],
+-        'policy_class': policy_class,
+-        'onscreen_render': onscreen_render,
+-        'policy_config': policy_config,
+-        'task_name': task_name,
+-        'seed': args['seed'],
+-        'temporal_agg': args['temporal_agg'],
+-        'camera_names': camera_names,
+-        'real_robot': not is_sim
+-    }
+-
+-    if is_eval:
+-        ckpt_names = [f'policy_best.ckpt']
+-        results = []
+-        for ckpt_name in ckpt_names:
+-            success_rate, avg_return = eval_bc(config, ckpt_name, save_episode=True)
+-            results.append([ckpt_name, success_rate, avg_return])
+-
+-        for ckpt_name, success_rate, avg_return in results:
+-            print(f'{ckpt_name}: {success_rate=} {avg_return=}')
+-        print()
+-        exit()
+-
+-    train_dataloader, val_dataloader, stats, _ = load_data(dataset_dir, num_episodes, camera_names, batch_size_train, batch_size_val)
+-
+-    # save dataset stats
+-    if not os.path.isdir(ckpt_dir):
+-        os.makedirs(ckpt_dir)
+-    stats_path = os.path.join(ckpt_dir, f'dataset_stats.pkl')
+-    with open(stats_path, 'wb') as f:
+-        pickle.dump(stats, f)
+-
+-    best_ckpt_info = train_bc(train_dataloader, val_dataloader, config)
+-    best_epoch, min_val_loss, best_state_dict = best_ckpt_info
+-
+-    # save best checkpoint
+-    ckpt_path = os.path.join(ckpt_dir, f'policy_best.ckpt')
+-    torch.save(best_state_dict, ckpt_path)
+-    print(f'Best ckpt, val loss {min_val_loss:.6f} @ epoch{best_epoch}')
+-
+-
+-def make_policy(policy_class, policy_config):
+-    if policy_class == 'ACT':
+-        policy = ACTPolicy(policy_config)
+-    elif policy_class == 'CNNMLP':
+-        policy = CNNMLPPolicy(policy_config)
+-    else:
+-        raise NotImplementedError
+-    return policy
+-
+-
+-def make_optimizer(policy_class, policy):
+-    if policy_class == 'ACT':
+-        optimizer = policy.configure_optimizers()
+-    elif policy_class == 'CNNMLP':
+-        optimizer = policy.configure_optimizers()
+-    else:
+-        raise NotImplementedError
+-    return optimizer
+-
+-
+-def get_image(ts, camera_names):
+-    curr_images = []
+-    for cam_name in camera_names:
+-        curr_image = rearrange(ts.observation['images'][cam_name], 'h w c -> c h w')
+-        curr_images.append(curr_image)
+-    curr_image = np.stack(curr_images, axis=0)
+-    curr_image = torch.from_numpy(curr_image / 255.0).float().cuda().unsqueeze(0)
+-    return curr_image
+-
+-
+-def eval_bc(config, ckpt_name, save_episode=True):
+-    set_seed(1000)
+-    ckpt_dir = config['ckpt_dir']
+-    state_dim = config['state_dim']
+-    real_robot = config['real_robot']
+-    policy_class = config['policy_class']
+-    onscreen_render = config['onscreen_render']
+-    policy_config = config['policy_config']
+-    camera_names = config['camera_names']
+-    max_timesteps = config['episode_len']
+-    task_name = config['task_name']
+-    temporal_agg = config['temporal_agg']
+-    onscreen_cam = 'angle'
+-
+-    # load policy and stats
+-    ckpt_path = os.path.join(ckpt_dir, ckpt_name)
+-    policy = make_policy(policy_class, policy_config)
+-    loading_status = policy.load_state_dict(torch.load(ckpt_path))
+-    print(loading_status)
+-    policy.cuda()
+-    policy.eval()
+-    print(f'Loaded: {ckpt_path}')
+-    stats_path = os.path.join(ckpt_dir, f'dataset_stats.pkl')
+-    with open(stats_path, 'rb') as f:
+-        stats = pickle.load(f)
+-
+-    pre_process = lambda s_qpos: (s_qpos - stats['qpos_mean']) / stats['qpos_std']
+-    post_process = lambda a: a * stats['action_std'] + stats['action_mean']
+-
+-    # load environment
+-    if real_robot:
+-        from aloha_scripts.robot_utils import move_grippers # requires aloha
+-        from aloha_scripts.real_env import make_real_env # requires aloha
+-        env = make_real_env(init_node=True)
+-        env_max_reward = 0
+-    else:
+-        from sim_env import make_sim_env
+-        env = make_sim_env(task_name)
+-        env_max_reward = env.task.max_reward
+-
+-    query_frequency = policy_config['num_queries']
+-    if temporal_agg:
+-        query_frequency = 1
+-        num_queries = policy_config['num_queries']
+-
+-    max_timesteps = int(max_timesteps * 1) # may increase for real-world tasks
+-
+-    num_rollouts = 50
+-    episode_returns = []
+-    highest_rewards = []
+-    for rollout_id in range(num_rollouts):
+-        rollout_id += 0
+-        ### set task
+-        if 'sim_transfer_cube' in task_name:
+-            BOX_POSE[0] = sample_box_pose() # used in sim reset
+-        elif 'sim_insertion' in task_name:
+-            BOX_POSE[0] = np.concatenate(sample_insertion_pose()) # used in sim reset
+-
+-        ts = env.reset()
+-
+-        ### onscreen render
+-        if onscreen_render:
+-            ax = plt.subplot()
+-            plt_img = ax.imshow(env._physics.render(height=480, width=640, camera_id=onscreen_cam))
+-            plt.ion()
+-
+-        ### evaluation loop
+-        if temporal_agg:
+-            all_time_actions = torch.zeros([max_timesteps, max_timesteps+num_queries, state_dim]).cuda()
+-
+-        qpos_history = torch.zeros((1, max_timesteps, state_dim)).cuda()
+-        image_list = [] # for visualization
+-        qpos_list = []
+-        target_qpos_list = []
+-        rewards = []
+-        with torch.inference_mode():
+-            for t in range(max_timesteps):
+-                ### update onscreen render and wait for DT
+-                if onscreen_render:
+-                    image = env._physics.render(height=480, width=640, camera_id=onscreen_cam)
+-                    plt_img.set_data(image)
+-                    plt.pause(DT)
+-
+-                ### process previous timestep to get qpos and image_list
+-                obs = ts.observation
+-                if 'images' in obs:
+-                    image_list.append(obs['images'])
+-                else:
+-                    image_list.append({'main': obs['image']})
+-                qpos_numpy = np.array(obs['qpos'])
+-                qpos = pre_process(qpos_numpy)
+-                qpos = torch.from_numpy(qpos).float().cuda().unsqueeze(0)
+-                qpos_history[:, t] = qpos
+-                curr_image = get_image(ts, camera_names)
+-
+-                ### query policy
+-                if config['policy_class'] == "ACT":
+-                    if t % query_frequency == 0:
+-                        all_actions = policy(qpos, curr_image)
+-                    if temporal_agg:
+-                        all_time_actions[[t], t:t+num_queries] = all_actions
+-                        actions_for_curr_step = all_time_actions[:, t]
+-                        actions_populated = torch.all(actions_for_curr_step != 0, axis=1)
+-                        actions_for_curr_step = actions_for_curr_step[actions_populated]
+-                        k = 0.01
+-                        exp_weights = np.exp(-k * np.arange(len(actions_for_curr_step)))
+-                        exp_weights = exp_weights / exp_weights.sum()
+-                        exp_weights = torch.from_numpy(exp_weights).cuda().unsqueeze(dim=1)
+-                        raw_action = (actions_for_curr_step * exp_weights).sum(dim=0, keepdim=True)
+-                    else:
+-                        raw_action = all_actions[:, t % query_frequency]
+-                elif config['policy_class'] == "CNNMLP":
+-                    raw_action = policy(qpos, curr_image)
+-                else:
+-                    raise NotImplementedError
+-
+-                ### post-process actions
+-                raw_action = raw_action.squeeze(0).cpu().numpy()
+-                action = post_process(raw_action)
+-                target_qpos = action
+-
+-                ### step the environment
+-                ts = env.step(target_qpos)
+-
+-                ### for visualization
+-                qpos_list.append(qpos_numpy)
+-                target_qpos_list.append(target_qpos)
+-                rewards.append(ts.reward)
+-
+-            plt.close()
+-        if real_robot:
+-            move_grippers([env.puppet_bot_left, env.puppet_bot_right], [PUPPET_GRIPPER_JOINT_OPEN] * 2, move_time=0.5)  # open
+-            pass
+-
+-        rewards = np.array(rewards)
+-        episode_return = np.sum(rewards[rewards!=None])
+-        episode_returns.append(episode_return)
+-        episode_highest_reward = np.max(rewards)
+-        highest_rewards.append(episode_highest_reward)
+-        print(f'Rollout {rollout_id}\n{episode_return=}, {episode_highest_reward=}, {env_max_reward=}, Success: {episode_highest_reward==env_max_reward}')
+-
+-        if save_episode:
+-            save_videos(image_list, DT, video_path=os.path.join(ckpt_dir, f'video{rollout_id}.mp4'))
+-
+-    success_rate = np.mean(np.array(highest_rewards) == env_max_reward)
+-    avg_return = np.mean(episode_returns)
+-    summary_str = f'\nSuccess rate: {success_rate}\nAverage return: {avg_return}\n\n'
+-    for r in range(env_max_reward+1):
+-        more_or_equal_r = (np.array(highest_rewards) >= r).sum()
+-        more_or_equal_r_rate = more_or_equal_r / num_rollouts
+-        summary_str += f'Reward >= {r}: {more_or_equal_r}/{num_rollouts} = {more_or_equal_r_rate*100}%\n'
+-
+-    print(summary_str)
+-
+-    # save success rate to txt
+-    result_file_name = 'result_' + ckpt_name.split('.')[0] + '.txt'
+-    with open(os.path.join(ckpt_dir, result_file_name), 'w') as f:
+-        f.write(summary_str)
+-        f.write(repr(episode_returns))
+-        f.write('\n\n')
+-        f.write(repr(highest_rewards))
+-
+-    return success_rate, avg_return
++
++from .policy import ACTPolicy, CONFIG, ROOT, load_policy_config, make_optimizer
++from .utils import load_data, compute_dict_mean, detach_dict, set_seed
+ 
+ 
+ def forward_pass(data, policy):
+     image_data, qpos_data, action_data, is_pad = data
+-    image_data, qpos_data, action_data, is_pad = image_data.cuda(), qpos_data.cuda(), action_data.cuda(), is_pad.cuda()
+-    return policy(qpos_data, image_data, action_data, is_pad) # TODO remove None
++    device = next(policy.parameters()).device
++    image_data, qpos_data, action_data, is_pad = image_data.to(device), qpos_data.to(device), action_data.to(device), is_pad.to(device)
++    return policy(qpos_data, image_data, action_data, is_pad)
+ 
+ 
+ def train_bc(train_dataloader, val_dataloader, config):
+     num_epochs = config['num_epochs']
+     ckpt_dir = config['ckpt_dir']
+     seed = config['seed']
+-    policy_class = config['policy_class']
+     policy_config = config['policy_config']
+ 
+     set_seed(seed)
+ 
+-    policy = make_policy(policy_class, policy_config)
+-    policy.cuda()
+-    optimizer = make_optimizer(policy_class, policy)
++    policy = ACTPolicy(policy_config, pretrained_backbone=config.get("pretrained_backbone", True))
++    policy.to(config['device'])
++    optimizer = make_optimizer(policy, policy_config)
+ 
+     train_history = []
+     validation_history = []
+@@ -413,23 +126,177 @@
+     print(f'Saved plots to {ckpt_dir}')
+ 
+ 
+-if __name__ == '__main__':
+-    parser = argparse.ArgumentParser()
+-    parser.add_argument('--eval', action='store_true')
+-    parser.add_argument('--onscreen_render', action='store_true')
+-    parser.add_argument('--ckpt_dir', action='store', type=str, help='ckpt_dir', required=True)
+-    parser.add_argument('--policy_class', action='store', type=str, help='policy_class, capitalize', required=True)
+-    parser.add_argument('--task_name', action='store', type=str, help='task_name', required=True)
+-    parser.add_argument('--batch_size', action='store', type=int, help='batch_size', required=True)
+-    parser.add_argument('--seed', action='store', type=int, help='seed', required=True)
+-    parser.add_argument('--num_epochs', action='store', type=int, help='num_epochs', required=True)
+-    parser.add_argument('--lr', action='store', type=float, help='lr', required=True)
+-
+-    # for ACT
+-    parser.add_argument('--kl_weight', action='store', type=int, help='KL Weight', required=False)
+-    parser.add_argument('--chunk_size', action='store', type=int, help='chunk_size', required=False)
+-    parser.add_argument('--hidden_dim', action='store', type=int, help='hidden_dim', required=False)
+-    parser.add_argument('--dim_feedforward', action='store', type=int, help='dim_feedforward', required=False)
+-    parser.add_argument('--temporal_agg', action='store_true')
+-    
+-    main(vars(parser.parse_args()))
++def train(config_path, output, device=None, epochs=None):
++    config=json.loads(Path(config_path).read_text())
++    settings=dict(config['training']);policy=dict(config['policy'])
++    device=device or settings['device']
++    epochs=epochs if epochs is not None else settings['num_epochs']
++    if epochs < 1:raise ValueError('epochs must be positive')
++    output=Path(output)
++    if output.exists():raise ValueError('Choose a new output directory; refusing overwrite')
++    torch.set_num_threads(settings['cpu_threads'])
++    set_seed(1)
++    source=ROOT/settings['dataset_dir']
++    train_loader,val_loader,stats,_=load_data(str(source),settings['num_episodes'],policy['camera_names'],
++        settings['batch_size'],settings['batch_size'],action_chunk_size=policy['num_queries'],num_workers=settings.get('num_workers',1))
++    if len(stats['qpos_mean']) != policy['state_dim']:raise ValueError('Dataset state dimension does not match model')
++    output.mkdir(parents=True)
++    policy['device']=device
++    (output/'policy_config.json').write_text(json.dumps(policy,indent=2)+'\n')
++    with (output/'dataset_stats.pkl').open('wb') as f:pickle.dump(stats,f)
++    run=dict(num_epochs=epochs,ckpt_dir=str(output),seed=settings['seed'],policy_config=policy,device=device,pretrained_backbone=settings.get('pretrained_backbone',True))
++    (output/'training_config.json').write_text(json.dumps(dict(config=config,resolved=run),indent=2)+'\n')
++    best=train_bc(train_loader,val_loader,run)
++    torch.save(best[2],output/'policy_best.ckpt')
++    return best
++
++
++def load_act(checkpoint_dir):
++    checkpoint_dir=Path(checkpoint_dir)
++    config=load_policy_config(checkpoint_dir)
++    config['device']='cpu'
++    model=ACTPolicy(config)
++    model.load_state_dict(torch.load(checkpoint_dir/'policy_best.ckpt',map_location='cpu',weights_only=True),strict=True)
++    model.eval()
++    with (checkpoint_dir/'dataset_stats.pkl').open('rb') as f:stats=pickle.load(f)
++    return model, stats
++
++
++def predict(model, stats, frame, qpos_deg):
++    started=time.perf_counter()
++    if frame.shape != (480,640,3):raise ValueError('画像サイズは640x480です')
++    qpos=np.deg2rad(np.asarray(qpos_deg,dtype=np.float64)).astype(np.float32)
++    if qpos.shape != (5,) or not np.isfinite(qpos).all():raise ValueError('Invalid qpos')
++    image=torch.from_numpy(cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)).permute(2,0,1).float()[None,None]/255
++    normalized=(torch.from_numpy(qpos)-torch.as_tensor(stats['qpos_mean']))/torch.as_tensor(stats['qpos_std'])
++    before=time.perf_counter()
++    with torch.inference_mode():chunk=model(normalized[None],image)[0].numpy()
++    inference_ms=(time.perf_counter()-before)*1000
++    if chunk.shape != (100,5) or not np.isfinite(chunk).all():raise ValueError('Invalid prediction')
++    return chunk, dict(local_inference_ms=inference_ms,total_local_ms=(time.perf_counter()-started)*1000)
++
++
++def temporal_aggregate(actions_for_curr_step, device):
++    """Original eval_bc temporal ensemble, shared with the Adeept hardware adapter."""
++    actions_populated = torch.all(actions_for_curr_step != 0, axis=1)
++    actions_for_curr_step = actions_for_curr_step[actions_populated]
++    k = 0.01
++    exp_weights = np.exp(-k * np.arange(len(actions_for_curr_step)))
++    exp_weights = exp_weights / exp_weights.sum()
++    exp_weights = torch.from_numpy(exp_weights).to(device).unsqueeze(dim=1)
++    raw_action = (actions_for_curr_step * exp_weights).sum(dim=0, keepdim=True)
++    return raw_action
++
++
++class TemporalEnsemble:
++    """Keep exactly the populated rows that original eval_bc would read at t."""
++    def __init__(self,aggregate):
++        self.aggregate=aggregate;self.chunks=OrderedDict()
++
++    def clear(self):self.chunks.clear()
++
++    def action(self,t,chunk=None,remember=True,temporal_agg=True):
++        if chunk is not None:
++            chunk=np.asarray(chunk,dtype=np.float32)
++            if chunk.shape!=(100,5) or not np.isfinite(chunk).all():raise ValueError('Invalid normalized chunk')
++        populated=[(start,values) for start,values in self.chunks.items()
++                   if 0<=t-start<100 and (chunk is None or start!=t)]
++        rows=[values[t-start] for start,values in populated]
++        if chunk is not None:
++            rows.append(chunk[0]);populated.append((t,chunk.copy()))
++        if not rows:raise ValueError('No valid predictions for this step')
++        value=(self.aggregate(torch.from_numpy(np.stack(rows)),'cpu')[0].numpy()
++               if temporal_agg else rows[-1].copy())
++        if not np.isfinite(value).all():raise ValueError('Invalid ensemble action')
++        if remember:self.chunks=OrderedDict(populated)
++        return value
++
++
++@dataclass
++class RolloutState:
++    step: int = 0
++    query_count: int = 0
++    ensemble: TemporalEnsemble = field(default_factory=lambda: TemporalEnsemble(temporal_aggregate))
++
++
++def predict_action(model, stats, observation, state, query_every=20, temporal_agg=True, preview=False):
++    """One rollout step: query if due, select/aggregate predictions, undo normalization."""
++    last_query=next(reversed(state.ensemble.chunks)) if state.ensemble.chunks else None
++    new_query=preview or last_query is None or state.step-last_query >= query_every
++    chunk=None
++    details=dict(logical_step=state.step, preview=preview, query_every_steps=query_every,
++                 qpos_deg=np.asarray(observation['qpos']).tolist(), queried=new_query)
++    if new_query:
++        request_id=time.time_ns()
++        chunk,metrics=predict(model,stats,observation['image'],observation['qpos'])
++        state.query_count+=1
++        details.update(request_id=request_id, normalized_actions=chunk.tolist(), **metrics)
++    normalized=state.ensemble.action(state.step,chunk,remember=not preview,temporal_agg=temporal_agg)
++    radians=normalized*np.asarray(stats['action_std'])+np.asarray(stats['action_mean'])
++    prediction=np.rad2deg(radians)
++    details['aggregated_action_deg']=prediction.tolist()
++    return prediction,details
++
++
++def eval_bc(model, stats, env, max_timesteps, state=None, query_every=20, temporal_agg=True, stop_event=None):
++    """Rollout without UI dependencies, following the official observation→policy→env.step loop.
++
++    env.observe(): {image: BGR frame, qpos: commanded degrees, ...}
++    env.step(prediction, current): validate/send targets, return sent degrees.
++    env.record_prediction()/record_step(): persist observations and execution logs.
++    env.halt(): stop motion while retaining joint holding.
++    A shared state allows the UI to pause/resume a trial without losing history.
++    """
++    if type(max_timesteps) is not int or max_timesteps < 1:raise ValueError('Invalid rollout length')
++    if type(query_every) is not int or not 1<=query_every<=100:raise ValueError('Invalid query interval')
++    state=state if state is not None else RolloutState()
++    deadline=time.monotonic()+1800
++    try:
++        with torch.inference_mode():
++            for index in range(max_timesteps):
++                if stop_event is not None and stop_event.is_set():break
++                started=time.monotonic()
++                if started >= deadline:break
++                observation=env.observe()
++                prediction,details=predict_action(model,stats,observation,state,query_every,temporal_agg)
++                env.record_prediction(observation,prediction,details)
++                if stop_event is not None and stop_event.is_set():break
++                target=env.step(prediction,np.asarray(observation['qpos']))
++                duration=time.monotonic()-started
++                state.step+=1
++                if index+1 < max_timesteps:
++                    delay=max(0,.05-(time.monotonic()-started))
++                    if stop_event is None:time.sleep(delay)
++                    else:stop_event.wait(delay)
++                env.record_step(state.step,observation,prediction,target,duration,time.monotonic()-started)
++    finally:
++        env.halt()
++    return state
++
++
++def main():
++    parser=argparse.ArgumentParser(description=__doc__)
++    parser.add_argument('--eval',action='store_true',help='Open CPU rollout UI; otherwise train')
++    parser.add_argument('--config',type=Path,default=CONFIG)
++    parser.add_argument('--output',type=Path)
++    parser.add_argument('--device',choices=['cpu','cuda'])
++    parser.add_argument('--epochs',type=int)
++    parser.add_argument('--checkpoint-dir',type=Path,default=ROOT/'models/act_image_runpod_20261107')
++    parser.add_argument('--port',default='/dev/ttyUSB0')
++    parser.add_argument('--http-port',type=int,default=8767)
++    parser.add_argument('--query-every',type=int,default=20,choices=range(1,101),metavar='1..100')
++    parser.add_argument('--no-temporal-agg',action='store_true',help='Use the newest chunk without weighted aggregation')
++    args=parser.parse_args()
++    if args.eval:
++        if args.device not in (None,'cpu'):parser.error('Rollout inference is CPU-only')
++        torch.set_num_threads(2);torch.set_num_interop_threads(1)
++        model,stats=load_act(args.checkpoint_dir)
++        from ui.act_test import ACTTrial, serve_trial
++        trial=ACTTrial(model,stats,args.checkpoint_dir,args.port,args.query_every,not args.no_temporal_agg)
++        serve_trial(trial,args.http_port)
++    else:
++        if args.output is None:parser.error('--output is required for training')
++        train(args.config,args.output,args.device,args.epochs)
++
++
++if __name__=='__main__':main()

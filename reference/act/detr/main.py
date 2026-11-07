@@ -64,15 +64,6 @@ def get_args_parser():
     parser.add_argument('--chunk_size', action='store', type=int, help='chunk_size', required=False)
     parser.add_argument('--temporal_agg', action='store_true')
 
-    parser.add_argument('--offline_check', action='store_true')
-    parser.add_argument('--state_dim', type=int, default=14)
-    parser.add_argument('--single_episode_check', action='store_true')
-    parser.add_argument('--device', choices=['cpu', 'cuda'], default='cuda')
-    parser.add_argument('--dataset_dir', type=str)
-    parser.add_argument('--num_episodes', type=int)
-    parser.add_argument('--cpu_threads', type=int, default=2)
-    parser.add_argument('--num_rollouts', type=int, default=50)
-
     return parser
 
 
@@ -84,7 +75,7 @@ def build_ACT_model_and_optimizer(args_override):
         setattr(args, k, v)
 
     model = build_ACT_model(args)
-    model.to(args_override.get('device', 'cuda'))
+    model.cuda()
 
     param_dicts = [
         {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},
@@ -107,7 +98,7 @@ def build_CNNMLP_model_and_optimizer(args_override):
         setattr(args, k, v)
 
     model = build_CNNMLP_model(args)
-    model.to(args_override.get('device', 'cuda'))
+    model.cuda()
 
     param_dicts = [
         {"params": [p for n, p in model.named_parameters() if "backbone" not in n and p.requires_grad]},

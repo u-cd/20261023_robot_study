@@ -19,10 +19,7 @@ import cv2
 import h5py
 import numpy as np
 
-try:
-    from .return_to_initial import ReturnToInitial
-except ImportError:
-    from return_to_initial import ReturnToInitial
+from .arm import ReturnToInitial
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -277,20 +274,20 @@ def main():
     parser.add_argument('--arm-url', default='http://127.0.0.1:8765')
     parser.add_argument('--hz', type=float, default=None)
     args = parser.parse_args()
-    config = json.loads((ROOT/'configs/demonstration.json').read_text())
+    config = json.loads((ROOT / 'configs/demonstration.json').read_text())
     args.hz = args.hz if args.hz is not None else config.get('recording_hz', 20)
     if not 1 <= args.hz <= 50:
         parser.error('--hz must be 1..50')
-    cam_config = json.loads((ROOT/'configs/camera.json').read_text())
+    cam_config = json.loads((ROOT / 'configs/camera.json').read_text())
     arm = ArmProxy(args.arm_url)
     camera = Camera(cam_config['camera'], cam_config['image_size'])
     recorder = Recorder(camera, arm.send, config, ROOT/'data/act_demonstrations_raw', args.hz)
     returner = ReturnToInitial(arm.send, config['initial_angles_deg'], arm.lock)
     transition_lock = threading.RLock()
     token = secrets.token_urlsafe(32)
-    page = (ROOT/'scripts/arm_panel.html').read_text().replace('__TOKEN__', token)
+    page = (Path(__file__).with_name('arm.html')).read_text().replace('__TOKEN__', token)
     page = page.replace('const defaultAngles=[90,0,0,80,90];', 'const defaultAngles='+json.dumps(config['initial_angles_deg'])+';')
-    extra = (ROOT/'scripts/collect_demonstrations.html').read_text().replace('__TOKEN__', token).replace('__HZ__', str(args.hz))
+    extra = (Path(__file__).with_name('collect.html')).read_text().replace('__TOKEN__', token).replace('__HZ__', str(args.hz))
     page = page.replace('<div class="grid-wrap">', extra+'\n<div class="grid-wrap">')
     page += "<script>request({action:'status'}).catch(e=>show(e.message,true));</script>"
 
