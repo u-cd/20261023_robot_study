@@ -19,3 +19,6 @@ __pycache__/
 *.MOV
 *.zip
 *.AppImage
+
+# Optional upstream reference checkout
+/reference/

@@ -13,7 +13,6 @@ import numpy as np
 import torch
 
 ROOT=Path(__file__).resolve().parents[1]
-sys.path.insert(0,str(ROOT/'experiments/initial_detection_act'))
 from act.imitate_episodes import temporal_aggregate, TemporalEnsemble, RolloutState
 from ui.act_test import ACTTrial
 

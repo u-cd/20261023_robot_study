@@ -7,7 +7,7 @@ import unittest
 
 import numpy as np
 
-sys.path.insert(0,str(Path(__file__).resolve().parents[1]/'experiments/initial_detection_act'))
+sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from test_detection_act import bounded_targets, Trial
 
 

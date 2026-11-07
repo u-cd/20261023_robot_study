@@ -33,7 +33,7 @@ uv sync --locked
 
 現在のACTは `act/` にある取り込み済みモデル・学習・推論・前処理で完結します。`reference/act` のインポート・追加クローン・差分適用は実行時には不要です。コピー元・ライセンスと変更は [act/UPSTREAM.md](../act/UPSTREAM.md)、差分は `act/official.patch` に記録しています。
 
-`reference/act` は固定コミットの未変更の公式コードです。小型ACTの再現時は、別コピーに実験用パッチを適用します。手順は [実験のREADME](../experiments/initial_detection_act/README.md) を参照してください。
+`reference/act` は固定コミットの未変更の公式コードで、Git管理外です。必要時は [取得手順](../act/UPSTREAM.md#比較用の公式コード任意) に従って取得してください。小型ACTの再現時は、別コピーに実験用パッチを適用します。手順は [実験のREADME](../experiments/initial_detection_act/README.md) を参照してください。
 
 GPU側の環境は別定義です。GPUホストで `uv sync --project cloud/runpod --frozen` を実行し、ローカルCPU環境と混ぜないでください。
 

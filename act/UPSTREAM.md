@@ -29,3 +29,12 @@ git apply /path/to/project/act/official.patch
 コピーした元ファイルへパッチを適用した結果が、現在の取り込み済みファイルと一致することを確認しています。変更時はこの差分も更新します。
 
 既存のフルサイズ重みをstrictに読み込み、同じ画像・2姿勢で移行前後の100×5予測が完全一致しました。記録は `runs/verification/refactoring_20261108/standalone_equivalence.json`（Git管理外）です。実機を動かす検証は行っていません。
+
+## 比較用の公式コード（任意）
+
+`reference/` はGit管理外です。通常の学習・推論には不要です。比較や旧小型ACTの再現に必要な場合のみ、プロジェクトのルートから取得します。既に手元にある場合は再クローン不要です。
+
+```bash
+git clone https://github.com/tonyzhaozh/act.git reference/act
+git -C reference/act checkout --detach 742c753c0d4a5d87076c8f69e5628c79a8cc5488
+```

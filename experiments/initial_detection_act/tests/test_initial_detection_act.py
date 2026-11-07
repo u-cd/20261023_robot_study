@@ -7,7 +7,7 @@ import unittest
 import numpy as np
 import torch
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(ROOT/'experiments/initial_detection_act'))
 from initial_detection_policy import InitialDetectionDataset
 

@@ -58,7 +58,7 @@ GPUで学習する場合はCUDA環境定義 `cloud/runpod/` を使います。�
 ## その他のフォルダ
 
 - `experiments/initial_detection_act/`：採用を見送った小型ACTと旧パッチ。
-- `reference/act/`：比較用の未変更の公式コード（固定コミット）。現在のACTは読みません。
+- `reference/act/`：比較用の未変更の公式コード（固定コミット、Git管理外）。現在のACTは読みません。必要時の取得方法は [出典と差分](act/UPSTREAM.md) を参照してください。
 - `arm_controller.ino`：Arduino側の共通ファームウェア。
 - `tests/`：モデル・データ処理・収集・制御の検証。
 - `docs/`：結果と再現手順。`experiment_plan_ja.md`：今後の計画。
