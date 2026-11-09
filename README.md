@@ -1,92 +1,77 @@
-# ACTでスポンジ搬送を再現する
+# ロボットアームで学ぶロボットAI
 
-Adeeptの5関節アームで、スポンジをcoinへ運ぶ実験です。採用中のコードを **学習・推論、UI、設定、データ準備** に分けています。`reference/act`・`experiments/initial_detection_act/` への実行時依存はありません。
+## 目的と概要
 
-モデルの定義は `act/policy.py` の `ACTPolicy` 一つです。学習・推論が同じクラスを使い、モデル構造は `configs/act.json` の `policy` にまとめています。必要なACT/DETRのネットワーク部品だけを取り込んでいます。[取り込み元・ライセンス・変更内容](act/UPSTREAM.md)も記録しています。
+ロボットアームをAIで動かすことを通して、ロボットAIを学ぶために始めたプロジェクトです。これまでロボットAIに取り組んだ経験がなかったため、アームの組み立てから実演データの収集、学習、実機での検証までを自分で行いました。
 
-- [2026-11-07の結果](docs/act_results_2026-11-07_ja.md)
-- [データ・学習・推論の再現手順](docs/reproduction_ja.md)
-- [今後の実験計画とメモ](experiment_plan_ja.md)
+学習目的なので、アームには1万円以下の安価なAdeept製のものを選び、モーターの取り付けから行っています。タスクは、できるだけ単純な「スポンジをつかみ、目標物であるコインの上に置く」動作にしました。
 
-## 推論・実機操作
+モデルには、模倣学習のACT（Action Chunking with Transformers）を使っています。模倣学習を試したいと思って調べる中でACTを知り、自分の環境でも取り組めそうだと考えたためです。
 
-```bash
-uv sync --locked
-uv run python -m act.imitate_episodes --eval --query-every 20
-```
+## 動作動画
 
-操作画面は http://127.0.0.1:8767 。起動だけではアームは動きません。アーム・カメラの接続と、後述の学習済み重みが必要です。
+[CPUでACTを動かした実機テストの動画（1分50秒）](docs/media/act_pick_place_2026-11-09.mp4)
 
-20制御ステップごとに新しく推論し、その間も予測済みの操作列で制御します。既定ではtemporal aggregationあり。`--no-temporal-agg` なら最新チャンクを順番に使います。20ステップは学習時の1秒分で、実時間の1秒間隔を保証しません。推論は手元のCPU専用です。
+2026年11月9日の録画から、6分00秒〜7分50秒を切り出したものです。再生できない場合は、リンク先のMP4をダウンロードして動画プレーヤーで開いてください。
 
-開始姿勢は `configs/demonstration.json` の `initial_angles_deg`（70・113・43・80・90度）です。画面表示・実演収集・開始姿勢への復帰が同じ設定を読みます。
+## 取り組んだこと
 
-## フォルダ構成
+自分でアームを操作して50回分の実演データを収集し、学習用40回・検証用10回に分けて使用しました。ACTの公式リポジトリをベースに、モデル構造や学習設定は基本的に公式に合わせています。学習回数は、公式の実機データ向け推奨を参考に5,000エポックとしました。
 
-```text
-act/          公式由来の学習・推論・モデル・データ読み込み
-ui/           自前の操作画面・実機接続・実演収集
-configs/      ACT・カメラ・実演のJSON設定
-prepare.py    自前の学習データ準備
-experiments/  採用を見送った小型ACT
-```
+公式のALOHAとはハードウェアが異なるため、アームやカメラ、実機との通信など、自分の環境に必要な部分を変更しています。公式由来のコードは必要な部分を切り出して保持し、変更内容は [act/official.patch](act/official.patch)、取り込み元と変更理由は [act/UPSTREAM.md](act/UPSTREAM.md) に残しています。
 
-公式由来のファイル名・クラス名・内部配置は `act/` 内で維持します。
-
-## コードを読む順番
-
-| ファイル | 役割 |
+| 項目 | 使用したもの・設定 |
 | --- | --- |
-| `act/imitate_episodes.py` | 学習・検証・重み読み込み・前処理・推論ループ・推論間隔・temporal aggregationをまとめた入口 |
-| `act/policy.py` | 学習・推論共通の`ACTPolicy`モデルと損失 |
-| `act/detr/models/` | コピーしたDETRVAE・Transformer・ResNet・位置埋め込み |
-| `ui/act_test.py`・`act_test.html` | 操作画面と実機環境のアダプター。カメラ取得・USB指令・安全確認・試験記録 |
-| `act/utils.py` | HDF5からのサンプリング・正規化・学習／検証分割 |
-| `ui/collect.py`・`collect.html` | 実演の生記録収集 |
-| `prepare.py` | 生記録からHDF5への変換 |
-| `ui/arm.py`・`arm.html` | 手動操作・基板通信・開始姿勢への復帰 |
-| `configs/act.json`・`camera.json`・`demonstration.json` | 学習とモデル・カメラ・実演の設定 |
+| アーム | Adeept ADA031 V4.0（Robotic Arm Kit for Arduino）、5関節 |
+| 制御基板 | Arduino UNO互換（CH340 USBシリアル） |
+| カメラ | EMEET SmartCam C960、1台（使用解像度640×480） |
+| 学習データ | 自分で操作した50回の実演 |
+| 学習環境 | RunPodのA40 GPUインスタンス |
+| 推論用CPU | Intel Core i7-8550U @ 1.80GHz（4コア・8スレッド） |
+| メモリ | 約30GiB（OS認識値） |
+| OS | Ubuntu 26.04.1 LTS |
+| Python・PyTorch | Python 3.12、PyTorch 2.5.1 CPU版 |
+| 推論間隔 | 20制御ステップごと。temporal aggregationを使用 |
 
-学習例（既存の実験は上書きしません）：
+A40の利用料金は当時約0.6ドル／時間で、学習には約4時間かかりました。学習だけなら約2.4ドル、検証などを含めたGPU利用料も合計5ドル未満と見積もっています。保存容量の料金は別です。
 
-```bash
-uv run python -m act.imitate_episodes --device cpu --output runs/new_act_training
-```
+## 結果と学んだこと
 
-GPUで学習する場合はCUDA環境定義 `cloud/runpod/` を使います。ネットワーク・損失・学習手順の取り込み元との差分は `act/official.patch` に保存しています。
+学習したACTをCPU上で推論し、実機でスポンジをつかんでコイン上へ運ぶことができました。推論1回は約0.5〜0.6秒で、20制御ステップごとに更新することで動作させています。
 
-## その他のフォルダ
+2026年11月9日の−寄り配置の継続試験では、結果確認済み21回中18回が手動補正なしで成功しました（85.7%）。一方で、対象物が台座＋寄りの位置になるほど失敗しやすい傾向と、運搬後に動作がループする問題が残っています。詳しい集計条件・試行結果・考察は [当日の検証記録](docs/act_loop_verification_2026-11-09_ja.md) を参照してください。
 
-- `experiments/initial_detection_act/`：採用を見送った小型ACTと旧パッチ。
-- `reference/act/`：比較用の未変更の公式コード（固定コミット、Git管理外）。現在のACTは読みません。必要時の取得方法は [出典と差分](act/UPSTREAM.md) を参照してください。
-- `arm_controller.ino`：Arduino側の共通ファームウェア。
-- `tests/`：モデル・データ処理・収集・制御の検証。
-- `docs/`：結果と再現手順。`experiment_plan_ja.md`：今後の計画。
+アームの組み立てと実演データの収集には、思った以上に手間がかかりました。また、ロボットの構造によってAIの入出力が変わるため、パソコン内で完結する画像・言語モデルより考えることが多いと感じました。
 
-## GitHubに含まれないもの
+その一方で、今回のタスクでは50回の実演と比較的安価な学習環境で成功例を得られ、CPUでも動作させられました。残る課題はありますが、想像以上に低コストで検証できたことから、ACTは優秀なモデルだと感じています。
 
-**コード・設定・文書は取得できますが、元の実演データと学習済み重みは公開していません。クローンだけでは今回の学習・推論結果を再現できません。** 公開ダウンロード先は未用意です。
+**本プロジェクトは2026年11月9日でいったん中断しています。** 再開する場合は、今回の考察を出発点に、カメラ配置の改善やループの発生・復帰条件を検討します。今後の計画とコードを読む順番は [実験計画と再開メモ](experiment_plan_ja.md) にまとめています。
 
-| ローカルの場所 | 内容 |
+## リポジトリの構成
+
+| 場所 | 内容 |
 | --- | --- |
-| `data/act_demonstrations_raw/` | 50実演の元画像・操作・時刻 |
-| `data/act_training/demonstrations_50_20hz/` | 学習した50個のHDF5・manifest。生記録から再生成可能 |
-| `data/initial_object_labels/`・`data/act_initial_detections_cpu_20261107/` | 小型ACT用のラベル・派生データ |
-| `models/` | 学習済みACT・検出器・初期重み・統計・設定 |
-| `runs/` | `training/`：学習結果、`act_robot_trials/`：実機試験、`verification/`：速度測定・整合性検証（Git管理外） |
-| `.tools/` | Arduino CLI・Servoライブラリなど。別環境では導入が必要 |
-| `.venv/`・`.build/` | Python環境・ビルド生成物。定義から再生成 |
+| `act/` | ACTの学習・推論、モデル定義、学習データの読み込み。公式由来のコードと差分・ライセンスを保持 |
+| `ui/` | アームの手動操作、実演収集、ACTの実機テスト用画面とカメラ・USB通信 |
+| `configs/` | モデル・学習・カメラ・実演開始姿勢の設定 |
+| `prepare.py` | 実演の生記録を学習用HDF5へ変換 |
+| `arm_controller.ino` | Arduino側のアーム制御ファームウェア |
+| `cloud/runpod/` | RunPodでのGPU学習用Python環境 |
+| `tests/` | データ処理・推論・記録・通信などの自動テスト |
+| `docs/` | 実機テストの結果・考察、再現手順、`media/` に掲載用動画 |
+| `experiments/initial_detection_act/` | 検出値を入力する小型ACTの検討コード。現在は採用見送り |
+| `experiment_plan_ja.md` | 今後の計画・再開時のメモ |
+| `pyproject.toml`・`uv.lock` | uvで管理するPython環境と依存関係 |
+| `AGENTS.md` | コード変更時の作業方針 |
 
-現在のACTの推論には `models/act_image_runpod_20261107/` の `policy_best.ckpt`・`dataset_stats.pkl`・`policy_config.json` を同じ場所へコピーします。`--checkpoint-dir` で別の場所も指定できます。古い重みに設定がない場合だけ `configs/act.json` のモデル設定を使用します。
+### ローカルにのみ保存しているもの
 
-小型ACTは `runs/training/initial_detection_act_20261107/inference_bundle.pt` と `models/detectors/yolov8n_sponge_coin_20261107.pt` を使用します。
+掲載用の動作動画は `docs/media/` に含めています。生データ・学習済み重み・その他の実行結果はGit管理外です。**GitHubからクローンするだけでは、今回の学習・推論結果を再現できません。** 公開ダウンロード先は用意していません。
 
-キャッシュ・MOV・HEIC・ZIP・AppImageなども `.gitignore` の対象です。Python環境はルートまたは `cloud/runpod/` の `pyproject.toml`・`uv.lock` から復元します。
-
-## テスト
-
-```bash
-uv run python -m unittest discover -s tests
-```
-
-実機は動かしません。元データが必要なテストは、未配置の場合にスキップします。
+| 場所 | 内容 |
+| --- | --- |
+| `data/` | 50実演の生記録・画像、学習用HDF5など |
+| `models/` | 学習済み重み・正規化統計・モデル設定など |
+| `runs/` | 学習・実機試験のログや画像、Webカメラ録画 |
+| `reference/act/` | 比較用の公式コード。現在のACTの実行には不要 |
+| `.tools/` | Arduino CLI・ライブラリなどのローカルツール |

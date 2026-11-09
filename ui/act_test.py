@@ -10,7 +10,7 @@ import time
 import cv2
 import numpy as np
 
-from .arm import ArmConnection, ReturnToInitial
+from .arm import ArmConnection, ReturnToInitial, SERIAL_BAUDRATE
 from act.policy import ROOT
 from act.imitate_episodes import RolloutState, predict_action, eval_bc
 
@@ -62,10 +62,13 @@ class ACTTrial:
         self.session_output = self.output
         self.trial_number = 1
         metadata = dict(checkpoint=str(Path(checkpoint_dir)/'policy_best.ckpt'), config=self.config,
-            initial_angles_deg=INITIAL.tolist(), requested_hz=20,
+            initial_angles_deg=INITIAL.tolist(), requested_hz=20,serial_baudrate=SERIAL_BAUDRATE,
             max_delta_per_update_deg=None, temporal_aggregation=self.temporal_agg,
             aggregation='temporal aggregation k=0.01' if temporal_agg else 'newest chunk',
             normalization='aggregate normalized actions, then action*std+mean; radians to integer degrees',
+            recording_schema=2,
+            normalization_stats={key:np.asarray(value).tolist() for key,value in self.stats.items()
+                                 if key in ['qpos_mean','qpos_std','action_mean','action_std']},
             note='Commanded angles, not physical measurements. No guarantee of 20Hz.')
         (self.output/'metadata.json').write_text(json.dumps(metadata, indent=2))
         self.set_query_every(query_every)
@@ -102,7 +105,7 @@ class ACTTrial:
             steps=self.completed_steps, camera_error=self.camera_error,
             actual_update_median_ms=float(np.median(self.timings)*1000) if self.timings else None,
             deadline_misses=self.misses, output=str(self.output), trial_number=self.trial_number,
-            model='ACT', inference_device='cpu', temporal_aggregation=self.temporal_agg, queries=self.query_count,
+            model='ACT', inference_device='cpu', serial_status_retries=getattr(self.arm,'status_retries',0), temporal_aggregation=self.temporal_agg, queries=self.query_count,
             query_every_steps=self.query_every, query_interval_training_seconds=self.query_every/20,
             actual_update_hz=self.completed_steps/self.control_elapsed_s if self.control_elapsed_s else None)
 
@@ -126,7 +129,15 @@ class ACTTrial:
 
     def refresh(self):
         with self.arm.lock:
-            self.last_state = self.arm.status()
+            try:
+                self.last_state = self.arm.status()
+            finally:
+                issues=getattr(self.arm,'status_issues',[])
+                if issues:
+                    with (self.output/'serial_events.jsonl').open('a') as f:
+                        for issue in issues:
+                            f.write(json.dumps(dict(logical_step=self.completed_steps,**issue),ensure_ascii=False)+'\n')
+                    issues.clear()
         return self.last_state
 
     def set_query_every(self,steps):
@@ -173,9 +184,14 @@ class ACTTrial:
         if not self.input_ready:raise ValueError('先に画像入力を確認してください')
         frame,sequence=self.snapshot();self.refresh()
         if not all(s['active'] for s in self.last_state):raise ValueError('全関節を有効にしてください')
-        return dict(image=frame,qpos=np.array([s['angle'] for s in self.last_state]),frame_sequence=sequence)
+        return dict(image=frame,qpos=np.array([s['angle'] for s in self.last_state]),frame_sequence=sequence,
+                    observed_at_ns=time.time_ns())
 
     def record_prediction(self,observation,prediction,details):
+        self.last_prediction_details={k:v for k,v in details.items() if k != 'normalized_actions'}
+        self.last_prediction_details.update(frame_sequence=observation['frame_sequence'],
+            observed_at_ns=observation.get('observed_at_ns'),
+            contributing_chunk_steps=list(self.ensemble.chunks))
         if details['queried']:
             request_id=details['request_id']
             cv2.imwrite(str(self.output/f'query_{request_id}.png'),observation['image'])
@@ -200,7 +216,7 @@ class ACTTrial:
         with (self.output/'steps.jsonl').open('a') as f:
             f.write(json.dumps(dict(index=index,time_ns=time.time_ns(),qpos_deg=observation['qpos'].tolist(),
                 prediction_deg=prediction.tolist(),sent_deg=target.tolist(),compute_and_send_s=duration,
-                input_mode=self.config['mode']))+'\n')
+                input_mode=self.config['mode'],prediction_details=getattr(self,'last_prediction_details',{})))+'\n')
         self.control_elapsed_s=getattr(self,'control_elapsed_s',0)+elapsed
 
     def halt(self):
@@ -221,22 +237,69 @@ class ACTTrial:
             commands = [f'MOVE {i+1} {int(a)}' for i,a in enumerate(targets)]
             self.arm.port.write(('\n'.join(commands)+'\n').encode('ascii'))
             done=0;lines=[];deadline=time.monotonic()+1
+            self.arm.last_exchange=dict(command=commands,time_ns=time.time_ns(),lines=lines,raw_lines_hex=[],done_count=0)
             while done < len(commands) and time.monotonic() < deadline:
-                line=self.arm.port.readline().decode('ascii',errors='replace').strip()
-                if line=='DONE': done+=1
-                elif line: lines.append(line)
+                line=self.arm.read_line()
+                if line is not None:
+                    self.arm.last_exchange['raw_lines_hex'].append(self.arm.last_line_hex)
+                if line=='DONE':
+                    done+=1;self.arm.last_exchange['done_count']=done
+                elif line:lines.append(line)
             if done != len(commands) or any(s.startswith('ERROR:') for s in lines):
-                raise RuntimeError('MOVE指令の受理を確認できません: '+' / '.join(lines))
+                error=RuntimeError(f'MOVE指令の受理を確認できません（DONE {done}/{len(commands)}）: '+' / '.join(lines))
+                error.serial_exchange=dict(self.arm.last_exchange,
+                    partial_line_hex=getattr(self.arm,'_rx',b'').hex())
+                raise error
 
     def run(self,step_limit):
         self.message='モデルで動作中'
         try:
             eval_bc(self.model,self.stats,self,step_limit,self.rollout,self.query_every,self.temporal_agg,self.stop)
             self.message='停止・保持しました。'
+            self.record_event('run_finished',requested_steps=step_limit)
         except Exception as e:
             self.message='停止: '+str(e)
+            try:
+                self.record_event('run_error',error=str(e),
+                    serial_exchange=getattr(e,'serial_exchange',getattr(self.arm,'last_exchange',None)))
+            except Exception as log_error:
+                self.message+=' / エラー記録にも失敗: '+str(log_error)
+
+    def record_event(self,event,**details):
+        """Human intervention markers; angles are commanded, never measured."""
+        request_id=time.time_ns()
+        record=dict(event=event,time_ns=request_id,monotonic_ns=time.monotonic_ns(),
+            logical_step=self.completed_steps,query_count=self.query_count,
+            commanded_state=self.last_state,**details)
+        try:
+            frame,sequence=self.snapshot()
+            name=f'event_{request_id}.png'
+            if not cv2.imwrite(str(self.output/name),frame):raise RuntimeError('画像保存失敗')
+            record.update(image=name,frame_sequence=sequence)
+        except Exception as e:
+            record['image_error']=str(e)
+        with (self.output/'events.jsonl').open('a') as f:
+            f.write(json.dumps(record,ensure_ascii=False)+'\n')
 
     def action(self,data):
+        action=data.get('action')
+        if action=='mark_loop':
+            self.action({'action':'stop'})
+            self.refresh()
+            self.record_event('loop_marked')
+            self.message='ループの発生位置を記録しました。停止中に手動補正し、同じ試行でモデルを再開できます。'
+            return
+        tracked=action in ['manual','stop','run','preview','return_initial','confirm_input']
+        # Stop must take priority even if recording storage is unavailable.
+        if tracked and action!='stop':self.record_event(action+'_requested',request=data)
+        try:
+            self._action(data)
+        except Exception as e:
+            if tracked:self.record_event(action+'_failed',request=data,error=str(e))
+            raise
+        if tracked:self.record_event(action+'_accepted',request=data)
+
+    def _action(self,data):
         action=data.get('action')
         if action=='stop':
             self.stop.set()
@@ -255,8 +318,19 @@ class ACTTrial:
                 self.input_ready=False; self.message='接続しました。実際の姿勢に合う角度で有効にしてください。'
             elif action=='manual':
                 command=data['command']
-                if command.get('action') not in ['start','status','speed']: raise ValueError('不正な手動操作')
-                result=self.arm.action(command)
+                if command.get('action')=='move':
+                    joint=command.get('joint');angle=command.get('angle')
+                    if type(joint) is not int or not 1<=joint<=5:raise ValueError('関節番号は1〜5です')
+                    low,high=(50,150) if joint==5 else (0,180)
+                    if type(angle) is not int or not low<=angle<=high:raise ValueError('角度が指令範囲外です')
+                    with self.arm.lock:
+                        self.refresh()
+                        if not self.last_state[joint-1]['active']:raise ValueError('先に関節を有効にしてください')
+                        self.arm.command(f'MOVE {joint} {angle}')
+                        result=dict(joints=self.arm.status(),message='手動補正の目標角度を送信しました')
+                else:
+                    if command.get('action') not in ['start','status','speed','step']:raise ValueError('不正な手動操作')
+                    result=self.arm.action(command)
                 self.last_state=result['joints'];self.message=result.get('message','')
             elif action=='confirm_input': self.confirm_input()
             elif action=='query_interval': self.set_query_every(data.get('steps'))

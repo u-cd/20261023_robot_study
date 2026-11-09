@@ -14,6 +14,9 @@
 <button onclick="act({action:'run',steps:10})">10回更新する</button>
 <button onclick="act({action:'run',steps:1000})">連続実行（最大1000回）</button>
 <p>推論する更新では応答を待ちます。指定回数または30分で自動停止します。coin付近で手動の位置調整が必要になる場合があります。異常があれば停止してください。</p>
+<h2>ループの記録と手動補正</h2>
+<button onclick="act({action:'mark_loop'})">ループを記録して停止・保持</button>
+<p>停止後、各関節の「−1°／＋1°」または入力角度の「補正」を使ってください。同じ試行のままモデル実行ボタンで再開します。補正時は古い予測履歴を消して、現在の画像・指令角度から推論し直します。補正前後の画像と操作を自動記録します。「次の試行」は押さないでください。</p>
 <h2>配置を変えて繰り返し試す</h2>
 <button onclick="act({action:'return_initial'})">開始姿勢へ戻す</button>
 <button onclick="act({action:'next_trial'})">次の試行（画像入力をクリア）</button>
@@ -22,7 +25,8 @@
 <script>
 const token='__TOKEN__';const names=['台座','肩','肘','手首','グリッパー'];const initial=__ENABLE_ANGLES__;
 let pending=false;let errorUntil=0;
-document.querySelector('#joints').innerHTML=names.map((name,i)=>`<div class="joint"><b>${name}</b><div id="state${i}">未取得</div><input id="angle${i}" type="number" min="${i===4?50:0}" max="${i===4?150:180}" value="${initial[i]}"><button onclick="enable(${i})">有効化</button></div>`).join('');
+document.querySelector('#joints').innerHTML=names.map((name,i)=>`<div class="joint"><b>${name}</b><div id="state${i}">未取得</div><input id="angle${i}" type="number" min="${i===4?50:0}" max="${i===4?150:180}" value="${initial[i]}"><button onclick="enable(${i})">有効化</button><br><button onclick="adjust(${i},'-')">−1°</button><button onclick="adjust(${i},'+')">＋1°</button><button onclick="act({action:'manual',command:{action:'move',joint:${i+1},angle:Number(document.querySelector('#angle${i}').value)}})">補正</button></div>`).join('');
+function adjust(i,direction){act({action:'manual',command:{action:'step',joint:i+1,direction}})}
 function enable(i){act({action:'manual',command:{action:'start',joint:i+1,angle:Number(document.querySelector('#angle'+i).value)}})}
 async function act(body){
  if(pending && body.action!=='stop')return;
@@ -33,7 +37,7 @@ async function act(body){
 function render(s){
  if(Date.now()>errorUntil){document.querySelector('#message').textContent=s.message;document.querySelector('#message').className='';}
  for(const j of s.joints)document.querySelector('#state'+(j.joint-1)).textContent=`${j.active?'有効':'無効'} 指令${j.angle}° → ${j.target}°`;
- document.querySelector('#info').textContent=JSON.stringify({試行番号:s.trial_number,推論実行場所:s.inference_device,推論間隔ステップ:s.query_every_steps,学習時の秒数:s.query_interval_training_seconds,動作中:s.running,更新回数:s.steps,予測角度:s.prediction_deg,処理時間中央値ms:s.actual_update_median_ms,実測更新Hz:s.actual_update_hz,モデルへの推論要求数:s.queries,目標50ms超過数:s.deadline_misses,カメラ:s.camera_error,記録先:s.output},null,2);
+ document.querySelector('#info').textContent=JSON.stringify({試行番号:s.trial_number,推論実行場所:s.inference_device,推論間隔ステップ:s.query_every_steps,学習時の秒数:s.query_interval_training_seconds,動作中:s.running,更新回数:s.steps,予測角度:s.prediction_deg,処理時間中央値ms:s.actual_update_median_ms,実測更新Hz:s.actual_update_hz,モデルへの推論要求数:s.queries,目標50ms超過数:s.deadline_misses,状態再取得回数:s.serial_status_retries,カメラ:s.camera_error,記録先:s.output},null,2);
 }
 async function poll(){try{render(await(await fetch('/state')).json())}catch(e){}setTimeout(poll,500)}poll();
 const image=document.querySelector('#camera');function refresh(){image.src='/frame.jpg?t='+Date.now()}image.onload=()=>setTimeout(refresh,150);image.onerror=()=>setTimeout(refresh,700);refresh();

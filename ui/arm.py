@@ -13,6 +13,7 @@ import serial
 
 # Same protocol, renamed firmware. Accept existing boards without forcing a reflash.
 FIRMWARE_IDS = (b"ARM_CONTROLLER_V3", b"ARM_TEST_V3")
+SERIAL_BAUDRATE = 57600  # Must match Serial.begin() in arm_controller.ino.
 
 
 class ArmConnection:
@@ -20,15 +21,37 @@ class ArmConnection:
         self.port = None
         self.lock = threading.RLock()
         self.last_motion_at = 0.0
+        self._rx = b""
+        self.last_exchange = None
+        self.status_issues = []
+        self.status_retries = 0
+
+    def read_line(self):
+        # pyserial.readline() can return a partial line on its short timeout.
+        # Preserve it across reads, including fragmented DONE terminators.
+        if b"\n" not in self._rx:
+            self._rx += self.port.readline()
+        if len(self._rx) > 8192:
+            raise RuntimeError("基板の応答行が長すぎます。通信状態を確認してください。")
+        if b"\n" not in self._rx:
+            return None
+        line, self._rx = self._rx.split(b"\n", 1)
+        self.last_line_hex = line.hex()
+        return line.decode("ascii", errors="replace").strip()
 
     def command(self, text):
+        with self.lock:
+            return self._command(text)
+
+    def _command(self, text):
         if self.port is None:
             raise RuntimeError("基板に接続してください。")
         self.port.write((text + "\n").encode("ascii"))
         result = []
+        self.last_exchange = dict(command=text,time_ns=time.time_ns(),lines=result,raw_lines_hex=[])
         deadline = time.monotonic() + 2
         while time.monotonic() < deadline:
-            line = self.port.readline().decode("ascii", errors="replace").strip()
+            line = self.read_line()
             if line == "DONE":
                 errors = [item for item in result if item.startswith("ERROR:")]
                 if errors:
@@ -36,19 +59,34 @@ class ArmConnection:
                 return result
             if line:
                 result.append(line)
-        raise TimeoutError("基板の応答がありません。USB接続を確認してください。")
+                self.last_exchange["raw_lines_hex"].append(self.last_line_hex)
+        self.last_exchange["partial_line"] = self._rx.decode("ascii", errors="replace")
+        raise TimeoutError("基板の応答が完結しません。USB接続を確認してください。受信: " + repr(self.last_exchange))
 
     def status(self):
-        result = []
-        for line in self.command("STATUS"):
-            match = re.fullmatch(r"([1-5]) (ON|OFF) (?:last-)?commanded=(\d+) target=(\d+) speed=(\d+)", line)
-            if match:
-                result.append({"joint": int(match[1]), "active": match[2] == "ON",
-                               "angle": int(match[3]), "target": int(match[4]),
-                               "speed": int(match[5])})
-        if len(result) != 5:
-            raise RuntimeError("基板の状態を取得できません。arm_controllerの対応版を書き込んでください。")
-        return result
+        # Only retry a complete but malformed read-only response. Never replay motion.
+        with self.lock:
+            for attempt in range(2):
+                result = []
+                lines = self.command("STATUS")
+                malformed = any("\ufffd" in line for line in lines)
+                for line in lines:
+                    match = re.fullmatch(r"([1-5]) (ON|OFF) (?:last-)?commanded=(\d+) target=(\d+) speed=(\d+)", line)
+                    if match:
+                        result.append({"joint": int(match[1]), "active": match[2] == "ON",
+                                       "angle": int(match[3]), "target": int(match[4]),
+                                       "speed": int(match[5])})
+                valid = (not malformed and len(result)==5
+                         and {s['joint'] for s in result}==set(range(1,6))
+                         and all(0<=s['angle']<=180 and 0<=s['target']<=180
+                                 and 5<=s['speed']<=100 for s in result))
+                if valid:
+                    return sorted(result,key=lambda s:s['joint'])
+                self.status_issues.append(dict(event='malformed_status',attempt=attempt+1,
+                    will_retry=attempt==0,exchange=self.last_exchange))
+                self.status_issues=self.status_issues[-50:]
+                if attempt==0:self.status_retries+=1
+            raise RuntimeError("基板の状態5関節分を再取得しても確認できません。通信の欠落・応答形式を確認してください。受信: " + repr(self.last_exchange))
 
     def close(self):
         if self.port is not None:
@@ -67,11 +105,12 @@ class ArmConnection:
                     port = data.get("port", "/dev/ttyUSB0")
                     if not isinstance(port, str) or not re.fullmatch(r"/dev/tty(?:USB|ACM)\d+", port):
                         raise ValueError("USBシリアルポート名を指定してください。")
-                    self.port = serial.Serial(port, 115200, timeout=0.03,
+                    self.port = serial.Serial(port, SERIAL_BAUDRATE, timeout=0.03,
                                               write_timeout=0.3, exclusive=True)
+                    self._rx = b""
                     deadline = time.monotonic() + 8
                     while time.monotonic() < deadline:
-                        if self.port.readline().strip() in FIRMWARE_IDS:
+                        if self.read_line() in [value.decode("ascii") for value in FIRMWARE_IDS]:
                             break
                     else:
                         raise RuntimeError("対応するarm_controllerを確認できません。書き込み後、再接続してください。")

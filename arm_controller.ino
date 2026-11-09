@@ -163,7 +163,7 @@ void processCommand() {
 }
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(57600);
   Serial.println(F("ARM_CONTROLLER_V3"));
   Serial.println(F("READY: all servo signals OFF"));
   help();
